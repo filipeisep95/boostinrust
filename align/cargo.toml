@@ -1,0 +1,5 @@
+[package]
+name = "boost-align"
+
+[dependencies]
+cxx = "1.0"
