@@ -3,3 +3,6 @@ name = "boost-align"
 
 [dependencies]
 cxx = "1.0"
+
+[build-dependencies]
+cxx-build = "1.0"
