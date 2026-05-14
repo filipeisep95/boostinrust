@@ -1,0 +1,9 @@
+/mnt/c/Users/filip/OneDrive - Instituto Superior de Engenharia do Porto/MESCC/2Ano/2Semestre/boostinrust/align/target/release/deps/find_msvc_tools-89426b781bad312b.d: /home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/lib.rs /home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/find_tools.rs /home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/tool.rs
+
+/mnt/c/Users/filip/OneDrive - Instituto Superior de Engenharia do Porto/MESCC/2Ano/2Semestre/boostinrust/align/target/release/deps/libfind_msvc_tools-89426b781bad312b.rlib: /home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/lib.rs /home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/find_tools.rs /home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/tool.rs
+
+/mnt/c/Users/filip/OneDrive - Instituto Superior de Engenharia do Porto/MESCC/2Ano/2Semestre/boostinrust/align/target/release/deps/libfind_msvc_tools-89426b781bad312b.rmeta: /home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/lib.rs /home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/find_tools.rs /home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/tool.rs
+
+/home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/lib.rs:
+/home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/find_tools.rs:
+/home/filipeferreira/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/find-msvc-tools-0.1.9/src/tool.rs:
