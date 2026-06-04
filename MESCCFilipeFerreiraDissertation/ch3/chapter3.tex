@@ -1,0 +1,301 @@
+        \chapter{Methodology and Solution Proposal}
+        \label{chap:Chapter3}
+
+        The migration of critical software infrastructure from C++ to Rust is not a
+        syntactic translation exercise but a fundamental architectural transformation.
+        It requires rethinking ownership, concurrency, and interface boundaries in order
+        to preserve functionality while improving safety guarantees.
+
+        As discussed in Chapter \ref{chap:Chapter2}, the so-called ``Boost Paradox''
+        introduces a unique challenge: the very features that make Boost powerful—such as
+        templates and metaprogramming—also hinder the applicability of automated
+        interoperability tools.
+
+        This chapter defines a structured methodology to decompose Boost-based systems
+        and proposes an architectural design that incrementally bridges the safety gap
+        between C++ and Rust.
+
+        \section{Component Selection Criteria}
+        \label{sec:SelectionCriteria}
+
+        Historically, a ``big bang'' rewrite of large C++ codebases into Rust has proven
+        prone to failure due to the difficulty of verifying feature parity, the
+        disruption of ongoing development, and the elevated certification risk in
+        safety-critical domains. Consequently, this research adopts a selective and
+        incremental migration strategy.
+
+        Boost libraries are not considered uniformly; instead, they are evaluated and
+        selected based on their relevance, isolation capability, and suitability for
+        automotive software architectures.
+
+        \subsection{Automotive-Oriented Selection Rationale}
+
+        The automotive sector has increasingly adopted open-source and modular software
+        platforms to address growing system complexity and multi-vendor integration. In
+        this context, several automotive manufacturers and suppliers participate in
+        Eclipse Software Defined Vehicle initiatives, including Eclipse \gls{SCORE}.
+
+        Eclipse \gls{SCORE} targets deterministic, portable, and interoperable software
+        architectures with long-term support guarantees—key concerns for ISO-26262 
+        compliant systems \parencite{eclipse_score}. These initiatives reflect the
+        realities of modern automotive development: large, heterogeneous C++ codebases,
+        long product lifecycles, and strict constraints on timing, memory usage, and
+        failure modes. Such characteristics render wholesale language replacement
+        infeasible and reinforce the need for incremental, well-contained migration
+        strategies.
+
+        The Boost libraries selected for migration are therefore evaluated according to
+        the following automotive-oriented criteria:
+
+        \begin{itemize}
+        \item \textbf{Relevance to in-vehicle software}: Preference is given to
+        libraries commonly used in middleware, communication, configuration
+        management, and concurrency control, which are prevalent in automotive
+        Electronic Control Units (ECUs) and service-oriented vehicle architectures.
+
+        \item \textbf{Deterministic behavior}: Libraries whose runtime behavior is
+        predictable and suitable for real-time or near-real-time constraints are
+        prioritized, aligning with automotive requirements for bounded latency and
+        reproducible execution.
+
+        \item \textbf{Safety and robustness}: Components that encode disciplined
+        resource management or concurrency patterns (e.g., Boost.SmartPtr,
+        Boost.Thread, Boost.Asio) are preferred, as they conceptually align with
+        Rust’s ownership and concurrency models.
+
+        \item \textbf{Isolation capability}: Libraries that can be encapsulated
+        behind stable, well-defined interfaces are favored, allowing them to serve
+        as clear boundaries for Foreign Function Interface (FFI) integration.
+
+        \item \textbf{Industrial adoption and tooling maturity}: Libraries actively
+        used or referenced in automotive-oriented open-source projects, such as
+        those under the Eclipse \gls{SCORE} ecosystem, are considered more suitable
+        due to their demonstrated industrial relevance.
+        \end{itemize}
+
+        \subsection{Deprioritized Components}
+
+        Not all Boost libraries are suitable for migration or interoperability with
+        Rust. Libraries that rely heavily on advanced template metaprogramming,
+        domain-specific embedded languages, or extensive compile-time code generation
+        are deprioritized due to their limited analyzability and poor suitability for
+        FFI-based integration.
+
+        Similarly, libraries not directly used or referenced in automotive-oriented
+        open-source projects such as Eclipse \gls{SCORE} are not considered immediate
+        migration candidates within the scope of this work.
+
+        \subsection{Safety-Critical Constraints and ISO 26262 Alignment}
+
+        ISO-26262 requires that software architectures for automotive safety systems
+        support freedom from interference, predictable execution, and systematic fault
+        avoidance. Programming languages and libraries used in such systems must
+        minimize undefined behavior, provide explicit ownership semantics, and enable
+        static verification wherever possible \parencite{iso26262}.
+
+        C++’s permissive memory model and reliance on developer discipline pose
+        challenges when targeting higher \gls{ASIL} levels. In practice, Boost libraries
+        are frequently employed in automotive systems to impose structure and
+        consistency on C++ development, particularly in resource management,
+        concurrency, and asynchronous communication \parencite{synopsys_asil}.
+
+        The proposed methodology leverages this disciplined use of Boost as a
+        preparatory step toward Rust integration. By constraining C++ systems to
+        well-defined Boost abstractions, reliance on raw pointers, implicit ownership
+        conventions, and ad hoc concurrency mechanisms is reduced. This aligns with
+        ISO-26262 recommendations for limiting systematic faults through controlled
+        language subsets, coding guidelines, and architectural enforcement
+        \parencite{iso26262}.
+
+        Rust components introduced under this methodology are designed to be
+        ownership-complete and memory-safe by construction. Unsafe code is strictly
+        isolated at Foreign Function Interface (FFI) boundaries, supporting safety
+        argumentation, auditability, and certification activities.
+
+        \subsection{Boost Libraries Relevant to Eclipse \gls{SCORE}}
+
+        In Eclipse \gls{SCORE}-style automotive architectures, Boost libraries are
+        commonly used to support middleware services, configuration management,
+        concurrency, and asynchronous I/O. Their selection is driven by the need to
+        enforce structure and predictability in large-scale, safety-relevant C++
+        systems.
+
+        Table~\ref{tab:boost_score_rust} summarizes Boost libraries commonly applicable
+        to automotive platforms such as Eclipse \gls{SCORE} and their corresponding
+        Rust-native equivalents.
+
+        \begin{table}[h!]
+        \centering
+        \begin{tabular}{|l|l|p{6cm}|}
+        \hline
+        \textbf{Boost Library} & \textbf{Rust Equivalent} & \textbf{Automotive Relevance} \\ \hline
+
+        Boost.Asio &
+        \texttt{tokio}, \texttt{async-std} &
+        Asynchronous I/O and event handling for in-vehicle services and middleware; requires careful runtime integration in safety-critical contexts \\ \hline
+
+        Boost.Thread &
+        \texttt{std::thread}, \texttt{crossbeam} &
+        Thread management and synchronization for concurrent ECU software components \\ \hline
+
+        Boost.SmartPtr &
+        \texttt{Box}, \texttt{Rc}, \texttt{Arc} &
+        Explicit ownership and lifetime management; directly maps to Rust’s ownership model \\ \hline
+
+        Boost.Optional &
+        \texttt{Option<T>} &
+        Explicit representation of optional values, reducing NULL pointer usage \\ \hline
+
+        Boost.Variant &
+        \texttt{enum} &
+        Type-safe sum types used in configuration, messaging, and state machines \\ \hline
+
+        Boost.Program\_options &
+        \texttt{clap}, \texttt{argh} &
+        Configuration parsing for tooling and non-safety-critical control components \\ \hline
+
+        Boost.Filesystem &
+        \texttt{std::fs}, \texttt{std::path} &
+        File and path handling in diagnostic, logging, and update subsystems \\ \hline
+
+        Boost.Chrono &
+        \texttt{std::time} &
+        Time measurement and timeout handling with deterministic semantics \\ \hline
+
+        \end{tabular}
+        \caption{Boost libraries relevant to Eclipse SCORE–style automotive systems and Rust equivalents}
+        \label{tab:boost_score_rust}
+        \end{table}
+
+        This mapping highlights that several Boost libraries already encode concepts
+        such as explicit ownership, variant-based state, and structured concurrency—
+        concepts that are native to Rust. As a result, the primary challenge of
+        migration is architectural rather than conceptual, reinforcing the feasibility
+        of incremental Rust adoption in safety-critical automotive ecosystems.
+
+        \subsection{Comparative Analysis as a Migration Enabler}
+
+        A central step in the proposed methodology is the comparison between Boost
+        libraries used in automotive systems and their Rust-native equivalents. This
+        comparison is not a simple replacement exercise, but an architectural analysis
+        that exposes semantic gaps, safety assumptions, and ecosystem limitations.
+
+        By explicitly mapping Boost abstractions to Rust constructs, developers can:
+        \begin{itemize}
+        \item Identify which safety properties are already enforced at the type level
+        \item Detect mismatches in ownership, error handling, or concurrency semantics
+        \item Quantify the residual risk that remains after migration
+        \end{itemize}
+
+        This analysis also reveals areas where no suitable Rust equivalent exists for
+        automotive-grade use. In such cases, the absence of a mature Rust library becomes
+        an explicit design signal rather than an implementation obstacle.
+
+        \subsection{From Library Gaps to New Rust Automotive Crates}
+        \label{subsec:NewRustLibraries}
+
+        The comparison between Boost and Rust ecosystems frequently uncovers
+        functionality that is either missing or insufficiently mature in Rust for
+        safety-critical automotive contexts.
+
+        Rather than forcing unsafe bindings or retaining C++ dependencies indefinitely,
+        the proposed methodology treats these gaps as opportunities for new Rust library
+        development. Such libraries are designed from the outset with:
+        \begin{itemize}
+        \item Explicit ownership and lifetime semantics
+        \item Deterministic execution models suitable for real-time analysis
+        \item Minimal and auditable unsafe code
+        \item Alignment with AUTOSAR Adaptive concepts
+        \end{itemize}
+
+        In this sense, Boost serves not only as a migration bridge, but also as a
+        functional benchmark that informs the evolution of Rust’s automotive ecosystem.
+        The migration process thus becomes bidirectional: existing C++ designs guide
+        Rust library development, while Rust’s guarantees inform safer architectural
+        patterns in C++.
+
+        \subsection{\gls{ASIL}-Oriented Migration Strategy}
+
+        ISO-26262 distinguishes software components according to their
+        \gls{ASIL}, ranging from \gls{QM} to \gls{ASIL}-D. Each level imposes increasing
+        requirements on fault avoidance, fault detection, and freedom from interference.
+        As a result, a uniform migration strategy is neither practical nor desirable
+        across all \gls{ASIL} levels.
+
+        The proposed methodology adopts a differentiated migration approach:
+
+        \begin{itemize}
+        \item \textbf{QM and \gls{ASIL}-A components}: Tooling, diagnostics, logging,
+        configuration services, and non-safety-critical middleware. These components
+        are suitable early candidates for Rust adoption, as certification
+        constraints are less restrictive.
+
+        \item \textbf{\gls{ASIL}-B and \gls{ASIL}-C components}: Communication services, resource
+        managers, and coordination logic. Rust integration at this level focuses on
+        eliminating memory safety defects while maintaining deterministic execution.
+        Unsafe Rust is strictly isolated and subject to additional verification.
+
+        \item \textbf{\gls{ASIL}-D components}: Rust is introduced only where its guarantees
+        provide demonstrable safety benefits. Components must be ownership-complete,
+        free from dynamic allocation where required, and analyzable under
+        \gls{WCET} constraints. \gls{FFI} boundaries are minimized and treated as
+        safety-relevant interfaces subject to rigorous review.
+        \end{itemize}
+
+        This stratification aligns with ISO-26262 recommendations for mixed-criticality
+        systems and supports freedom from interference between software elements of
+        different ASIL levels.
+
+
+        \subsection{Migration Workflow Overview}
+
+        Figure \ref{fig:migration_workflow} presents the proposed incremental migration
+        workflow for integrating Rust into Boost-based automotive software systems.
+        The workflow is designed to support safety-critical development under
+        ISO-26262 constraints while preserving system continuity and certification
+        traceability.
+
+        The process begins with a \textbf{comparative analysis} of existing Boost
+        library usage and available Rust-native equivalents. This step establishes a
+        semantic baseline by identifying ownership models, concurrency assumptions,
+        error-handling mechanisms, and determinism properties already enforced in the
+        C++ architecture.
+
+        Based on this analysis, an \textbf{architectural refactoring phase} follows,
+        during which Boost abstractions are used to constrain C++ components into
+        well-defined, analyzable interfaces. This step reduces semantic ambiguity,
+        limits undefined behavior, and prepares the system for language boundary
+        introduction without altering functional behavior.
+
+        Next, \textbf{\gls{FFI} boundary definition} is performed. Stable and minimal
+        interfaces are identified between C++ and Rust components, with explicit
+        ownership transfer rules and data lifetime guarantees. These boundaries are
+        treated as safety-relevant interfaces and are subject to additional review
+        and verification.
+
+        The workflow then proceeds with \textbf{incremental Rust integration}, where
+        Rust components are introduced selectively according to their assigned
+        \gls{ASIL} level. Initial integration targets QM and ASIL-A components, followed
+        by progressively higher-criticality elements as confidence, tooling maturity,
+        and safety argumentation evolve.
+
+        Throughout the process, \textbf{continuous verification and validation} are
+        performed to ensure functional equivalence, timing predictability, and freedom
+        from interference. Feedback from each iteration informs subsequent migration
+        steps, allowing the workflow to adapt to architectural constraints and
+        certification requirements.
+
+        \begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.9\textwidth]{ch3/assets/migration_workflow.png}
+        \decoRule
+        \caption[Boost-to-Rust Migration Workflow]{Incremental migration workflow for
+        Boost-based automotive systems integrating Rust under ISO-26262 constraints}
+        \label{fig:migration_workflow}
+        \end{figure}
+
+        Overall, the workflow emphasizes early reduction of semantic ambiguity on the
+        C++ side and controlled introduction of Rust components, enabling safer and
+        more predictable interoperability while maintaining compliance with
+        automotive safety standards.
+

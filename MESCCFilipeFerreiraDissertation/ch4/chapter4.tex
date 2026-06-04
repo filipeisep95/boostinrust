@@ -1,0 +1,180 @@
+\chapter{Development Plan}
+\label{chap:Chapter4}
+
+This chapter presents the development plan for the proposed Boost-to-Rust
+migration methodology. It details the planned reimplementation of selected
+components in Rust, the design of stable interfaces, and the integration of
+bidirectional \gls{FFI}. The plan is structured to
+support incremental adoption while maintaining compliance with automotive
+safety standards such as ISO-26262 and architectural principles from
+AUTOSAR Adaptive.
+
+The development activities are scheduled between February and July and are
+organized to progressively reduce technical risk while preserving functional
+continuity of the existing C++ system.
+
+\section{Objectives and Scope}
+
+The primary objectives of this development phase are:
+
+\begin{itemize}
+    \item To reimplement selected Boost-based components in Rust with equivalent
+    functionality and improved memory-safety guarantees.
+    \item To design explicit, minimal, and auditable interfaces between C++ and
+    Rust components.
+    \item To integrate Rust modules incrementally using bidirectional \gls{FFI},
+    preserving deterministic behavior and freedom from interference.
+    \item To validate the resulting hybrid system against safety, correctness,
+    and performance expectations relevant to automotive software.
+\end{itemize}
+
+The scope of this chapter is limited to architectural and integration-level
+development. Functional feature expansion beyond parity with the existing C++
+implementation is explicitly excluded.
+
+\section{Development Phases Overview}
+
+The development plan is divided into six sequential phases:
+
+\begin{enumerate}
+    \item System analysis and Boost component selection
+    \item Architectural refactoring and interface definition
+    \item Rust reimplementation of selected components
+    \item Bidirectional \gls{FFI} integration
+    \item Validation and safety analysis
+    \item Consolidation and documentation
+\end{enumerate}
+
+Each phase produces concrete artifacts that serve as inputs for the subsequent
+phase, enabling traceability and controlled progression consistent with
+ISO-26262 development practices.
+
+\section{System Analysis and Component Selection}
+
+\subsection*{February}
+
+The initial phase focuses on analyzing the existing C++ system and identifying
+Boost libraries that are relevant to automotive software architectures such as
+those used in Eclipse SCORE–based environments.
+
+The analysis includes:
+\begin{itemize}
+    \item Identification of Boost libraries in use and their functional roles
+    \item Classification of components by criticality and \gls{ASIL} level
+    \item Mapping of Boost abstractions to potential Rust-native equivalents
+\end{itemize}
+
+This phase establishes the baseline architecture and defines the migration
+targets for subsequent development.
+
+\section{Architectural Refactoring and Interface Design}
+
+\subsection*{March}
+
+In this phase, the selected C++ components are refactored to reduce semantic
+ambiguity and prepare them for interoperability. Boost abstractions are used to
+replace raw pointers, ad hoc ownership conventions, and implicit lifetimes.
+
+Key activities include:
+\begin{itemize}
+    \item Encapsulation of migrated components behind stable interfaces
+    \item Elimination of undefined behavior patterns
+    \item Definition of ownership and lifetime semantics at component boundaries
+\end{itemize}
+
+This refactoring step does not change observable behavior but improves
+analyzability and safety argumentation.
+
+\section{Rust Reimplementation}
+
+\subsection*{April}
+
+During this phase, selected Boost-based components are reimplemented in Rust.
+The Rust implementations are designed to be ownership-complete and memory-safe
+by construction.
+
+Design constraints include:
+\begin{itemize}
+    \item Explicit ownership and borrowing semantics
+    \item Deterministic execution suitable for timing analysis
+    \item Minimal use of \texttt{unsafe} code, isolated and documented
+\end{itemize}
+
+Functional equivalence with the original C++ components is verified through
+unit testing and interface-level validation.
+
+\section{Bidirectional \gls{FFI} Integration}
+
+\subsection*{May}
+
+This phase introduces bidirectional \gls{FFI} integration between C++ and Rust.
+Stable C-compatible interfaces are defined, and responsibility for memory
+allocation, ownership transfer, and error handling is made explicit.
+
+Key concerns addressed include:
+\begin{itemize}
+    \item Isolation of unsafe code at \gls{FFI} boundaries
+    \item Prevention of exception and panic propagation across language borders
+    \item Alignment with AUTOSAR Adaptive service-oriented communication models
+\end{itemize}
+
+The \gls{FFI} boundary is treated as a safety-relevant interface and is subject to
+additional review.
+
+\section{Validation and Safety Analysis}
+
+\subsection*{June}
+
+Validation activities focus on ensuring that the hybrid C++/Rust system meets
+functional, safety, and performance expectations.
+
+This includes:
+\begin{itemize}
+    \item Functional regression testing
+    \item Concurrency and race-condition analysis
+    \item Review of freedom from interference between components of different
+    \gls{ASIL} levels
+\end{itemize}
+
+The results of this phase support the safety argumentation required for
+ISO-26262 compliant systems.
+
+\section{Consolidation and Documentation}
+
+\subsection*{July}
+
+The final phase consolidates the development results and prepares the system
+for evaluation and reporting.
+
+Activities include:
+\begin{itemize}
+    \item Final architectural documentation
+    \item Evaluation of migration feasibility and limitations
+    \item Documentation of lessons learned and future work
+\end{itemize}
+
+This phase ensures that the development process and outcomes are reproducible
+and auditable.
+
+\section{Development Timeline}
+
+Table \ref{tab:development_gantt} presents a Gantt-style overview of the
+development plan covering the February–July period.
+
+
+\begin{table}[ht!]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+\textbf{Activity / Month} & \textbf{Feb} & \textbf{Mar} & \textbf{Apr} & \textbf{May} & \textbf{Jun} & \textbf{Jul} \\ \hline
+System Analysis and Boost Selection      & X &   &   &   &   &   \\ \hline
+Architectural Refactoring &   & X &   &   &   &   \\ \hline
+Rust Reimplementation     &   &   & X &   &   &   \\ \hline
+Bidirectional \gls{FFI} Integration            &   &   &   & X &   &   \\ \hline
+Validation and Safety Analysis           &   &   &   &   & X &   \\ \hline
+Consolidation and Documentation          &   &   &   &   &   & X \\ \hline
+\end{tabular}
+\caption{Gantt-style development plan for the Boost-to-Rust migration}
+\label{tab:development_gantt}
+\end{table}

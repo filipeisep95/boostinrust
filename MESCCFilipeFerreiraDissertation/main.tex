@@ -1,0 +1,160 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DMECS Dissertation
+% LaTeX Template
+% Version 0.4 (Nov/2025)
+%
+% Adapted to MESCC/ISEP by
+% Luis Miguel Pinho (lmp@isep.ipp.pt) and
+% António Barros (amb@isep.ipp.pt)
+%
+% Based on TMDEI/ISEP style (Dec/2015) by
+%  Nuno Pereira (nap@isep.ipp.pt) and
+%  Paulo Baltarejo (pbs@isep.ipp.pt)
+%
+% Based on MastersDoctoralThesis Version 1.2 by Vel (vel@latextemplates.com) and
+% Johannes Böttcher, downloaded from (21/11/15):
+% http://www.LaTeXTemplates.com
+%
+% This template is originally based on a template by:
+% Steve Gunn (http://users.ecs.soton.ac.uk/srg/softwaretools/document/templates/)
+% Sunil Patel (http://www.sunilpatel.co.uk/thesis-template/)
+%
+% Template license:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[
+	11pt, % The default document font size, options: 10pt, 11pt, 12pt
+	%oneside, % Two side (alternating margins) for binding by default, uncomment to switch to one side (for drafting/reading purposes)
+	english, % english for English;
+	%portuguese, % for Portuguese; delete temporary files if you change language (e.g. 'make clean; make')
+	%singlespacing, % Single line spacing, alternatives: onehalfspacing or doublespacing (for drafting/reading purposes)
+	onehalfspacing, % AMB: Specified by the ISEP template guidelines.
+	%draft, % Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
+	nolistspacing, % If the document is onehalfspacing or doublespacing, uncomment this to set spacing in lists to single
+	%liststotoc, % Uncomment to add the list of figures/tables/etc to the table of contents (not recommended)
+	%toctotoc, % Uncomment to add the main table of contents to the table of contents (not recommended)
+	parskip, % Add space between paragraphs (recommended)
+	%nohyperref, % Uncomment to not load the hyperref package (not recommended)
+	nohyperreflinkcolor, % hyperref links are not colored (comment to color links, for example to produce an electronic-only version)
+	headsepline, % Uncomment to get a line under the header
+]{dmesc-style} % The class file specifying the document structure
+
+\usepackage{tikz} % Required for creating graphics programmatically (can be removed if not used)
+%\usetikzlibrary{arrows} % Required for fancy arrows in TiKZ graphics (can be removed if not used)
+
+\usepackage{pgfplots} % Required for drawing high--quality function plots (can be removed if not used)
+\pgfplotsset{compat=newest}
+
+%
+% Next you have examples of admissable citation styles; we recomend using the authoryear-comp citation style (which resembles Harvard); don't forget to only uncomment one
+%
+
+% authoryear-comp: recommended citation style (e.g. (Buendía, 1860), (Buendía 1910, Arcadio 1940))
+% AMB: USE THIS STYLE, according to ISEP dissertation guidelines.
+\usepackage[style=authoryear-comp,backend=biber]{biblatex} % Bibtex backend with the authoryear-comp citation style (authoryear citations, bibliography ordered alphabetically)
+
+% numeric citation style (e.g. [1], [1-3])
+% AMB: DO NOT USE THIS STYLE, according to ISEP dissertation guidelines.
+%\usepackage[style=numeric-comp,sorting=none,backend=biber]{biblatex} % Bibtex backend with the numeric-comp citation style (numeric citations, bibliography ordered by appearance)
+
+% alphabetic citation style (e.g. [Buendía10], [Buendía10, Arcadio40])
+% AMB: DO NOT USE THIS STYLE, according to ISEP dissertation guidelines.
+%\usepackage[style=alphabetic,sorting=none,backend=biber]{biblatex} % Bibtex backend with the alphabetic citation style (alphabetic citations, bibliography ordered by appearance)
+
+\usepackage{url}
+
+\usepackage{tabularx}
+
+\addbibresource{mainbibliography.bib} % The filename of the bibliography
+
+\makeglossaries % build the glossary
+
+
+%----------------------------------------------------------------------------------------
+%	THESIS INFORMATION
+%----------------------------------------------------------------------------------------
+
+\thesistitle{Modernizing C++ Legacy Systems with Rust: Strategies for Safe Interoperability and Performance Evaluation in Rust-Based Boost Components} % Your thesis title, this is used in the title, print it elsewhere with \ttitle
+
+%\thesissubtitle{Subtitle (if exists)} % Your thesis subtitle, this is used in the title, print it elsewhere with \tsubtitle, comment line if not existing
+
+\author{Filipe Daniel Ferreira} % Your name, this is used in the title page, print it elsewhere with \authorname
+
+\supervisor{Luis Miguel Pinho} % Your supervisor's name, this is used in the title page, print it elsewhere with \supname
+
+%\cosupervisor{Full Name (if exists)} % Your co-supervisor's name, this is used in the title page, print it elsewhere with \cosupname (comment, if no co-supervisor)
+
+%\externalsupervisor{Full Name (if exists)} % Your external (company) supervisor's name, this is used in the title page, print it elsewhere with \extsupname (comment, if no external supervisor)
+
+%\committeepresident{Full Name, Category, Affiliation} % Name of the president of the evaluation committee, print it elsewhere with \presidentname
+
+% \committeepresident{}
+
+% \committeemembers{}
+
+%\committeemembers{Full Name, Category, Affiliation\\Full Name, Category, Affiliation} % Name of the evaluation committee members (up to four), print it elsewhere with \committee
+
+\keywords{Boost, C++, Rust, interoperability, migration, memory safety} % Please define up to 6 keywords that better describe your work, print it elsewhere with \keywordnames
+
+\thesisdate{Porto, \today} % thesis date,  print it elsewhere with \tdate
+
+\hypersetup{pdftitle=\ttitle} % Set the PDF's title to your title
+\hypersetup{pdfauthor=\authorname} % Set the PDF's author to your name
+\hypersetup{pdfkeywords=\keywordnames} % Set the PDF's keywords to your keywords
+
+%----------------------------------------------------------------------------------------
+%	THE CONTENT OF THE DOCUMENT BEGINS HERE
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+
+%----------------------------------------------------------------------------------------
+%	FRONT MATTER
+%----------------------------------------------------------------------------------------
+
+% Include the frontmatter of your thesis here
+\input{frontmatter/frontmatter}
+
+%----------------------------------------------------------------------------------------
+%	MAIN BODY
+%----------------------------------------------------------------------------------------
+
+% Include the chapters of the thesis as separate folder for each chapter
+% Uncomment the lines as you write the chapters
+
+\input{ch1/chapter1}
+\input{ch2/chapter2}
+\input{ch3/chapter3}
+\input{ch4/chapter4}
+%\input{ch5/chapter5}
+
+
+%----------------------------------------------------------------------------------------
+%	BIBLIOGRAPHY
+%----------------------------------------------------------------------------------------
+
+\printbibliography[heading=bibintoc]
+
+%----------------------------------------------------------------------------------------
+%	THESIS CONTENT - APPENDICES
+%----------------------------------------------------------------------------------------
+
+\appendix % Cue to tell LaTeX that the following "chapters" are Appendices
+
+% Include the appendices of the thesis as separate files from the Appendices folder
+% Uncomment the lines as you write the Appendices
+
+% \input{appendices/appendixA}
+%\input{appendices/appendixB}
+%\input{appendices/appendixC}
+
+%----------------------------------------------------------------------------------------
+
+\end{document}
