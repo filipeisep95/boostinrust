@@ -1,0 +1,159 @@
+% Chapter 1
+% 
+\chapter{Introduction} % Main chapter title
+\label{chap:Chapter1} % For referencing the chapter elsewhere, use Chapter~\ref{Chapter1}
+
+
+%-------------------------------------------------------------------------------
+%---------
+%
+\section{High-Level Overview and Motivation} 
+\label{sec:high_level_overview} 
+The automotive industry is performing a profound transformation driven by the rise of the \gls{SDV}, 
+autonomous driving technologies and increasingly interconnected \gls{ECU} \parencite{spglobalsdv}. 
+With the grouth of these systems in complexity and responsability, the reliability of high-assurance software becomes critical. 
+The systems must operate under strict real-time, reliability and safety requeriments regulated by standards as ISO 26262 \parencite{deloittesdvreadiness}. 
+In this environment, memory safety has a special importance, as software faults can directly translate into physical hazards \parencite{adacore_nsa_cisa_msl}.
+
+Historically, C++ has been the dominant language (paired with C) in embedded and automotive development due to its performance, 
+deterministic resource use and mature ecosystem \parencite{ISO26262_Part6}. 
+However, its dependence on manual memory management continues to be a major source of vulnerabilities such as: 
+buffer overflows, dangling pointes, race conditions and undefined behaviors \parencite{MISRACpp2023}. 
+Such issues are incompatible with the needs ofsafety critical cyber-physical systems, 
+where a minor software defect can lead to serious consequences \parencite{AUTOSAR_Adaptive}.
+
+Rust has rapidly emerged as a plausible successor for safety-critical software. 
+Enforcing memory safety, ownerhip and data race free concurrency at compile time \parencite{docs_rs}. 
+Rust promises to drastically reduce classes of defects edemic to C/C++ systems \parencite{ProgrammingRust}. 
+Rust achieves this without introducing garbage collection, retaining the predictability required for real-time environments \parencite{docs_rs}.
+
+Despite the advantages Rust presents, the transition from C++ to Rust in large industrial ecosystems remains complex. 
+Automotive software contains millions of lines of validated legacy C++ code. 
+This code is oftenly built at top of complex frameworks and libraries as Boost C++ libraries \parencite{CXX_Crate}. 
+Rewrinting those systems from scratch is infeasible. To avoid it, the companies usally pursue incremental and hybrid migration. 
+This migration requires robust interoperability between Rust and C++ \parencite{Google_Rust_Interop}.
+
+This dissertation is motivated byt the need to address that gap: 
+enabling safe, practical and measurable integration of Rust into deeply entrenched C++ based automotive architectures, 
+specially real-time related architectures.
+
+Rewriting millions of lines of validated, legacy C++ code is operationally infeasible, 
+necessitating a hybrid integration strategy. 
+This transition is particularly problematic for automotive subsystems (such as sensor fusion, V2X communication and path planning) 
+that are deeply coupled with the C++ ecosystem and reliant on complex, template-heavy frameworks like the Boost C++ Libraries.
+
+
+\section{Problem Statement} 
+\label{sec:problem_statement} %For referencing this section elsewhere, use Section~\ref{sec:chap1_introduction}
+
+The central results from the tension between two different realities:
+\begin{enumerate}
+    \item \textbf{C++ is deeply entrenched in automotive systems}, specially through heavily templated, performance-critical frameworks like Boost.
+    \item  \textbf{Rust provides strong memory safety guarantees}, but its adoption is hindered by the difficulty of interoperating with complex C++ abstrations creating a challenge for a transition between C++ and Rust. 
+\end{enumerate} 
+
+Currently, the interoperability approaches rely mainly on C-style \gls{FFI} . 
+However, ist not possiblet to natively represent C++ templates, ownership semantics, 
+RAII lifecycles or advanced Boost abstractions with C \gls{FFI} \parencite{CrubitDesign}.
+
+As result of this limitation:
+\begin{itemize}
+    \item The integration often requires unsafe code, reducing Rust's safety benefits.
+    \item Interfacing with templaty heavily libraries, as Boost.Geometry and Boost.Asio, introduces high engineering overhead.
+    \item Crossing the Rust and C++ boundary imposes a performance cost that is poorly characterized for high-assurance systems.
+    \item No established methodology exists for the systematic and incremental migration of C++ Boost components to Rust while maintaining compatibility with real-time automotive subsystems.
+\end{itemize}
+
+The problem is not simply porting code from C++ to Rust, but the absence of validated techniques, architectural patterns, and tooling to bridge the impedance mismatch between C++ templates and Rust's ownership model, without breaking determinism, performance or safety requirements.
+
+
+\section{Research Questions}
+\label{sec:research_questions}
+To address this gap, this dissertations is guided by the following research questions:
+\begin{enumerate}
+    \item How can Rust be integrated into existing C++/Boost based automotive systems in a way that preserves and improves safety, determinism and performance?
+    \item What are the technical criteria required to identify wich Boost library components are the most viable candidates for a migration to Rust within an automotive context?
+    \item Which Boost components represent suitable candidates for partial or complete migration to Rust, considering complexity, memory safety risk and template dependency?
+    \item What architectural patterns and \gls{FFI} strategies enable safe and efficient bidirectional communication between Rust and C++?
+    \item What measurable performance and memory safety benefits does a rust based reimplementation provide when compared with its Boost counterpart?
+    \item What are the interoperability costs ("FFI tax") and how do they impact hybrid real-time systems?
+\end{enumerate}
+
+\section{Research Objectives}
+\label{sec:research_objectives}
+
+The primary objective of this dissertation is to design, implement and evaluate a methodology for the incremental migration of Boost C++ Boost components into Rust, ensuring safe and efficient interoperability within hybrid systems. This involves re-architecting critical components to leverage Rust's memory safety guarantees and evaluating resulting architectural trade-offs.
+
+The specific objectives are
+\begin{itemize}
+    \item Analyze the current interoperability mechanisms between Rust and C++ (e.g., CXX, Bindgen, autocxx, cbindgen).
+    \item Identify and define criteria for selecting Boost components suitable for migration (eg. memory-safety relevance, template complexity, use in automotive systems).
+    \item Re-architect and re-implement a selected Boost component in Rust while preserving semantics and meeting strict ownership and borrowing guarantees.
+    \item Design bidirectional Rust and C++ interfaces enabling both C++ to call Rust and Rust to call C++ components.
+    \item Measure runtime performance, memory footprint and the overhead of FFI interactions.
+    \item Evaluate the overall feasibility, benefits and limitations of incremental C++ to Rust migration in high-assurance environments.
+\end{itemize}
+
+\section{Research Contributions}
+\label{sec:research_contributions}
+
+The contributions of this dissertation are:
+\begin{itemize}
+    \item A comprehensive overview of Rust, C++ and Rust interoperability and the Boost library ecosystem.
+    \item A systematic analysis of existing interoperability mechanisms and their suitability for template-heavy automotive codebases.
+    \item A formalized methodology for selecting and migrating Boost components to Rust.
+    \item A Rust-native reimplementation of selected Boost component with full memory safety guarantees.
+    \item A robust bidirectional FFI integration layer
+    \item A Performance evaluation comparing Rust and C++ implementations and quantifiying overhead
+\end{itemize}
+
+\section{Dissertation Plan Structure}
+\label{sec:dissertation_structure}
+
+The remainder of this dissertation plan is organized as follows:
+\begin{itemize}
+    \item \textbf{Chapter 2 - State of the Art:}\newline
+    Presents the tehcnological backgrund and related work. Includes Rust fundamentals, C++ interoperability mechanisms, Boost library architecture and prior migration initiatives.
+
+    \item \textbf{Chapter 3 - Methodology and Solution proposal:}\newline
+    Defines the criteria for selecting Boost components and describes the proposed migration methodology and architectural designed.
+
+   \item \textbf{Chapter 4 - Development Plan:}\newline
+   Details the Rust reimplementation, interface design and bidirectional FFI integration.
+
+%    \item \textbf{Chapter 5 - Evaluation:}\newline
+%    Provides performance benchmarks, analysis of memory behavior, characterization of FFI overhead and a comparson with the C++ reference implementation.
+
+%    \item \textbf{Chapter 6 - Conclusions and Future Work:}\newline
+%    Summarizes findings, discusses limitations and outlines directions for future research on Rust adoption in high-assurance systems.
+
+\end{itemize}
+
+\section{Privacy and ethics}
+In the context of this dissertation plan, which is focused in modernizing C++ based systems using Rust, 
+ethical considerations were primarily centered on scientific integrity, software safety and intellectual property compliance.
+
+The research relied on public open-source codebases, as Boost libraries.  No personal data, user-identifiable information (PII), or private operational logs were collected, processed, or stored. 
+Consequently, the study falls outside the scope of GDPR requirements regarding human subjects.
+
+
+\section{Use of AI Tools}
+\label{sec:ai_tools}
+
+For the preparation of this dissertation plan and supporting documentation, 
+AI tools (specifically large language models) were used strictly for the following purposes:
+\begin{itemize}
+    \item \textbf{Document writing evaluation and improvement}, including linguistic refinement, clarity enhancement, and reorganization of text originally written by the author.
+    \item \textbf{Assistance in identifying potential sources and directions for literature review}, such as suggesting relevant topics, keywords, and areas of research to investigate. All cited references included in the dissertation were individually verified, read, and selected by the author.
+    \item Structural feedback and general writing suggestions for non-technical sections.
+    \item Code example generation to support the investigation of the state of the art and also to facilitate the understanding.
+\end{itemize}
+
+The tools used were Perplexity (latest version), for deep search specialy for community based information, 
+chat GPT (version GPT\-5.1) and Gemini (version 3), for document writing evaluation and improvement.
+
+No AI-generated technical explanations, conceptual developments, design decisions, code, 
+or analysis results were incorporated directly into the dissertation. 
+All technical content is exclusively authored by the candidate.
+
+The author takes full responsibility for the correctness, originality, and academic integrity of the work presented. If additional AI tools are used during the subsequent stages of the dissertation, this section will be updated accordingly to specify which tools were used, for what purpose, and in which components of the document. If no further AI usage occurs, this will also be explicitly stated.

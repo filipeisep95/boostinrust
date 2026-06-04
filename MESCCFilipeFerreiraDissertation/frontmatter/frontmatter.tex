@@ -1,0 +1,175 @@
+
+% we include the glossary here (frontmatter is included with \input, so this command is as if it was in main.tex)
+\input{frontmatter/glossary}
+
+\frontmatter % Use roman page numbering style (i, ii, iii, iv...) for the pre-content pages
+
+\pagestyle{plain} % Default to the plain heading style until the thesis style is called for the body content
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\maketitlepage
+
+
+%----------------------------------------------------------------------------------------
+%	STATEMENT of INTEGRITY
+%----------------------------------------------------------------------------------------
+
+\integritystatement
+
+
+%----------------------------------------------------------------------------------------
+%	DEDICATION  (optional)
+%----------------------------------------------------------------------------------------
+%
+%\dedicatory{For/Dedicated to/To my\ldots}
+% \begin{dedicatory}
+
+%The dedicatory is optional. 
+
+% \end{dedicatory}
+
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT PAGE
+%----------------------------------------------------------------------------------------
+
+\begin{abstract}
+
+The growing complexity of safety-critical software systems, particularly in the automotive domain, 
+has intensified concerns regarding memory safety, concurrency correctness 
+and long-term maintainability of large C++ codebases. Although C++ remains the dominant language in embedded and 
+real-time systems due to its performance and mature ecosystem, 
+its reliance on manual memory management continues to be a major source of vulnerabilities. 
+Rust has emerged as a promising alternative, offering strong compile-time guarantees for memory safety 
+and data-race freedom without introducing garbage collection. 
+However, the adoption of Rust in industrial environments is hindered by the scale of existing C++ systems 
+and their deep dependence on template-heavy frameworks such as the Boost C++ Libraries.
+
+This dissertation investigates strategies for incrementally modernizing legacy C++ systems by integrating Rust in a safe 
+and performant manner. Focusing on Boost-based components commonly used in automotive software architectures, 
+it proposes a systematic methodology for selecting migration candidates, designing bidirectional interoperability interfaces, 
+and re-implementing critical functionality in Rust. The work explores \gls{FFI} patterns, 
+evaluates existing interoperability tools, and addresses the architectural challenges arising from the mismatch 
+between C++ templates and Rust’s ownership model.
+
+A Rust-based reimplementation of selected Boost components is developed and integrated into a hybrid C++/Rust system. 
+Performance, memory usage, and interoperability overhead are experimentally evaluated to quantify the benefits 
+and costs of this approach. The results demonstrate that incremental migration can significantly improve memory safety 
+while preserving determinism and performance, providing practical guidance for the adoption of Rust in high-assurance 
+and safety-critical software systems.
+
+\end{abstract}
+
+\begin{abstractotherlanguage}
+A crescente complexidade dos sistemas de software crítico e seguro, particularmente no domínio automóvel, 
+intensificou as preocupações relativas à segurança da memória, à correção da concorrência 
+e à manutenção a longo prazo de grandes bases de código C++. Embora o C++ continue a ser a linguagem dominante 
+em sistemas embebidos e de tempo real devido ao seu desempenho e ecossistema maduro, 
+a sua dependência da gestão manual da memória continua a ser uma importante fonte de vulnerabilidades. 
+O Rust surgiu como uma alternativa promissora, oferecendo fortes garantias em tempo de compilação para a segurança da memória 
+e a ausência de conflitos de dados, sem introduzir a recolha de lixo. 
+No entanto, a adoção do Rust em ambientes industriais é dificultada pela escala dos sistemas C++ existentes 
+e sua profunda dependência de frameworks fortemente baseadas em modelos, como as bibliotecas Boost C++.
+
+Esta dissertação investiga estratégias para modernizar incrementalmente sistemas C++ antigos, integrando Rust de maneira segura 
+e com bom desempenho. Com foco em componentes baseados em Boost comumente usados em arquiteturas de software automotivo, 
+ela propõe uma metodologia sistemática para selecionar candidatos à migração, projetar interfaces de interoperabilidade 
+bidirecionais e reimplementar funcionalidades críticas em Rust. O trabalho explora padrões de \gls{FFI}, 
+avalia ferramentas de interoperabilidade existentes e aborda os desafios arquitetônicos decorrentes da incompatibilidade 
+entre modelos C++ e o modelo de propriedade do Rust.
+
+Uma reimplementação baseada em Rust de componentes Boost selecionados é desenvolvida e integrada a um sistema híbrido C++/Rust. 
+O desempenho, o uso de memória e a sobrecarga de interoperabilidade são avaliados experimentalmente para quantificar os benefícios 
+e custos dessa abordagem. Os resultados demonstram que a migração incremental pode melhorar significativamente a segurança da memória ,
+preservando o determinismo e o desempenho, fornecendo orientações práticas para a adoção do Rust em sistemas de software de alta garantia 
+e segurança crítica.
+
+\end{abstractotherlanguage}
+
+
+%----------------------------------------------------------------------------------------
+%	ACKNOWLEDGEMENTS (optional)
+%----------------------------------------------------------------------------------------
+
+% \begin{acknowledgements}
+
+%Acknowledgements (optional) to family, supervisors, colleagues, organizations, funding agencies, …
+
+% \end{acknowledgements}
+
+
+%----------------------------------------------------------------------------------------
+%	LIST OF CONTENTS/FIGURES/TABLES PAGES
+%----------------------------------------------------------------------------------------
+
+\tableofcontents % Prints the main table of contents
+
+\listoffigures % Prints the list of figures
+
+\listoftables % Prints the list of tables
+
+%\iflanguage{portuguese}{
+%\renewcommand{\listalgorithmname}{Lista de Algor\'itmos}
+%}
+%\listofalgorithms % Prints the list of algorithms
+%\addchaptertocentry{\listalgorithmname}
+
+
+%\renewcommand{\lstlistlistingname}{List of Source Code}
+%\iflanguage{portuguese}{
+%\renewcommand{\lstlistlistingname}{Lista de C\'odigo}
+%}
+%\lstlistoflistings % Prints the list of listings (programming language source code)
+%\addchaptertocentry{\lstlistlistingname}
+
+
+%----------------------------------------------------------------------------------------
+%	ABBREVIATIONS
+%----------------------------------------------------------------------------------------
+\begin{abbreviations}{ll} % Include a list of abbreviations (a table of two columns)
+%\textbf{LAH} & \textbf{L}ist \textbf{A}bbreviations \textbf{H}ere\\
+%\textbf{WSF} & \textbf{W}hat (it) \textbf{S}tands \textbf{F}or\\
+\end{abbreviations}
+
+%----------------------------------------------------------------------------------------
+%	SYMBOLS
+%----------------------------------------------------------------------------------------
+
+%\begin{symbols}{lll} % Include a list of Symbols (a three column table)
+
+% [Note: Although acronyms and symbols are defined in this section, they should also be defined at least the first time used in the dissertation body.]
+
+%$a$ & distance & \si{\meter} \\
+%$P$ & power & \si{\watt} (\si{\joule\per\second}) \\
+%Symbol & Name & Unit \\
+
+%\addlinespace % Gap to separate the Roman symbols from the Greek
+
+%$\omega$ & angular frequency & \si{\radian} \\
+
+%\end{symbols}
+
+
+
+%----------------------------------------------------------------------------------------
+%	ACRONYMS
+%----------------------------------------------------------------------------------------
+
+\newcommand{\listacronymname}{List of Acronyms}
+\iflanguage{portuguese}{
+\renewcommand{\listacronymname}{Lista de Acr\'onimos}
+}
+
+%Use GLS
+\glsresetall
+\printglossary[title=\listacronymname,type=\acronymtype,style=long]
+
+%----------------------------------------------------------------------------------------
+%	DONE
+%----------------------------------------------------------------------------------------
+
+\mainmatter % Begin numeric (1,2,3...) page numbering
+\pagestyle{thesis} % Return the page headers back to the "thesis" style
