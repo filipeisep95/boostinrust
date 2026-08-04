@@ -1,0 +1,45 @@
+\chapter{Implementation of the Migration Strategy}
+\label{chap:Chapter7}
+
+\section{ImplementationOverview}
+
+This chapter presents the implementation of the Boost to Rust migration described in the previous chapters.
+The implementation focuses on two selected Boost libraries, namely \texttt{Boost.Align} and \texttt{Boost.Endian},
+which were selected due to their low level nature, 
+relevance to systems programming and suitable for evaluating the migration methodology. 
+
+The implementation translates the relevant functionality of the original C++ libraries into Rust, 
+while avoiding a direct syntactic translation of the original source code.
+Instead, the Rust implementation uses Rust's ownership model, type system and stadard library facilities where these
+provide suitable abstractions for the original C++ functionality.
+
+The implementation is evaluated with respect to foir main objectives: functional equivalence, memory safety,
+interoperability with existing C++ software and suitability for automotive systems software.
+
+The implementation follows the migration strategy described in Chapter \ref{chap:Chapter5}.
+For each library, the original functionality is first mapped to Rust abstractions, follower by the implementation 
+of the selected functionality and its associated tests. Where interoperability is required, a C++ interface 
+is introduced around the Rust implementation, which is then tested through benchmark tests.
+
+\section{Implementation Environment}
+
+The implementation was developed in the \texttt{boostinrust} repository, which provides the experimental environment 
+for evaluating the migration of selected Boost libraries to Rust. The implementation focuses on \texttt{Boost.Align} 
+and \texttt{Boost.Endian}, selected as representative examples of low level systems functionality involving 
+memory alignment and binary data representation. 
+
+The Rust implementation was developed using Rust version 1.93. The development environment includes the Rust compiler
+(\texttt{rustc}), Cargo and the LLVM/Clang based tooling provided with the Rust toolchain. In particular, 
+the environment contains the Rust compiler and the associated \texttt{rust-clang}, \texttt{rust-lld}, 
+\texttt{rust-llvm-dwp}, and \texttt{rustdoc} components. The use of the LLVM/Clang toolchain is relevant to the low-level 
+nature of the selected libraries and provides the compiler infrastructure required for building and 
+inspecting the resulting Rust implementation.
+
+The original Boost implementations are used as the reference implementations for the migration. This allows the Rust 
+implementation to be evaluated against the functionality and observable behavior of the original C++ corresponding libraries.
+The approach follows the migration strategy described in Chapter \ref{chap:Chapter5}, in which the functionality and dependencies
+of the original library are first analyzed before equivalent Rust abstractions are defined and implemented. 
+The resulting Rust implementation is then tested and evaluated against the original C++ library to ensure functional equivalence,
+memory safety, interoperability and suitability for automotive systems software.
+
+The implementation does not attempt to reproduce the interal structure of the C++ implementation directly.

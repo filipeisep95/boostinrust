@@ -1,94 +1,72 @@
 # boostinrust
 
-# Report 17-05-2026
+**boostinrust** is a repository of idiomatic Rust reimplementations of selected Boost C++ libraries.
 
-## Commands
+The goal of the project is to preserve the behavior, correctness, and performance characteristics of the original Boost components while expressing them in Rust with safer ownership, clearer structure, and maintainable APIs.
 
-To build the Rust library:
+## Overview
 
-`cargo build --release`
+This repository is part of an ongoing effort to evaluate and migrate Boost-based C++ systems toward Rust, with emphasis on systems programming, interoperability, and benchmark-driven validation.
 
-To build the test example in C++:
-`g++ -std=c++03 -O2 -mavx main.cpp     -Itests/include     -I/usr/include/boost     -Ltarget/release     -lalign     -lpthread -ldl     -o bench && ./bench`
+The current `align` module is a Rust rewrite of Boost.Align-style memory-alignment utilities and AVX-oriented buffer handling. It focuses on maintaining alignment guarantees and performance parity while using idiomatic Rust abstractions.
 
----
+## Goals
 
-## Benchmark Report
-**Boost.Align (C++ AVX)** vs **Rust AlignedBuffer (Rust AVX)**
+- Recreate Boost library functionality in Rust.
+- Keep the implementation idiomatic, safe, and maintainable.
+- Preserve correctness, alignment, and performance characteristics.
+- Support Rust-C++ interoperability where needed.
+- Provide benchmark-backed evidence for migration decisions.
 
-**Buffer:** 16,777,216 floats (64 MB) | **Iterations:** 50
+## Current Module
 
----
+### `align`
 
-### Implementation
+The `align` module implements aligned buffer handling and AVX-oriented operations inspired by Boost.Align. It is designed to validate whether a Rust implementation can match or exceed the original C++ version in real workloads.
 
-| | Boost.Align | Rust AlignedBuffer |
-|---|---|---|
-| Allocator | `boost::alignment::aligned_alloc` | `Rust AlignedBuffer<f32>` (Box + alloc) |
-| AVX kernel | C++ AVX (`_mm256_mul_ps`) | Rust AVX (`aligned_buffer_double_avx`) |
+### Benchmark Summary
 
----
+A benchmark comparing Boost.Align against the Rust implementation showed:
 
-### Correctness
-
-| Check | Boost.Align | Rust AlignedBuffer |
-|---|---|---|
-| Result | ✅ PASS | ✅ PASS |
-| 32-byte alignment | OK (rem=0) | OK (rem=0) |
-
----
-
-### Timing
-
-| Metric | Boost.Align | Rust AlignedBuffer | Winner |
-|---|---|---|---|
-| Total time | 1.0839s | 1.0351s | ⬅ Rust |
-| Per-iteration | 21.6782ms | 20.7014ms | ⬅ Rust |
-| Throughput | 6.19 GB/s | 6.48 GB/s | ⬅ Rust |
-
-> **Speed ratio (Boost / Rust):** 1.047x — Rust is **4.7% faster**
-
----
-
-### Memory — Allocation
-
-| Metric | Boost.Align | Rust AlignedBuffer | Winner |
-|---|---|---|---|
-| RSS delta | +196 KB | +65,540 KB | ⬅ Boost |
-| Virtual delta | +65,540 KB | +65,540 KB | ~ TIE |
-
----
-
-### Memory — During Run
+- Correctness: pass in both versions.
+- 32-byte alignment: pass in both versions.
+- Throughput: Rust was slightly faster.
+- Memory behavior: both versions returned pages to the OS on free.
 
 | Metric | Boost.Align | Rust AlignedBuffer |
-|---|---|---|
-| RSS delta (run) | +64 KB | +0 KB |
-
-> Near-zero expected — pages committed during warm-up.
-
----
-
-### Memory — Deallocation
-
-| Metric | Boost.Align | Rust AlignedBuffer |
-|---|---|---|
-| RSS delta (free) | -65,540 KB | -65,540 KB |
-| Pages returned to OS | Yes (munmap) | Yes (munmap) |
-
----
-
-### Summary
-
-| Metric | Boost.Align | Rust AlignedBuffer |
-|---|---|---|
-| Allocator | Boost | Rust |
-| AVX kernel | C++ (`_mm256_mul_ps`) | Rust (FFI) |
-| Correctness | ✅ PASS | ✅ PASS |
-| 32-byte alignment | OK | OK |
+|---|---:|---:|
 | Avg iteration time | 21.6782 ms | 20.7014 ms |
 | Throughput | 6.19 GB/s | 6.48 GB/s |
-| RSS on alloc | +196 KB | +65,540 KB |
-| Memory returned on free | Yes (munmap) | Yes (munmap) |
+| Speed ratio | 1.047x | Rust faster by 4.7% |
 
-> **Overall speed ratio (Boost/Rust):** 1.047x — Rust wins on throughput, Boost wins on RSS footprint.
+## Build align
+
+Build the Rust library:
+
+```bash
+cargo build --release
+```
+
+Build and run the C++ benchmark example:
+
+```bash
+g++ -std=c++03 -O2 -mavx main.cpp \
+    -Itests/include \
+    -I/usr/include/boost \
+    -Ltarget/release \
+    -lalign \
+    -lpthread -ldl \
+    -o bench && ./bench
+```
+
+## Thesis Material
+
+The `MESCCFilipeFerreiraDissertation` folder contains the LaTeX sources for the thesis and related report material supporting this work.
+
+## Scope
+
+This repository is not a direct translation of Boost code line by line. It is a Rust-native reinterpretation of selected Boost components, designed to be practical for research, benchmarking, and long-term maintenance.
+
+## License
+
+Add the appropriate license information for this repository here.

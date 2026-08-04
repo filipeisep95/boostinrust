@@ -38,27 +38,27 @@
 
 \begin{abstract}
 
-The growing complexity of safety-critical software systems, particularly in the automotive domain, 
-has intensified concerns regarding memory safety, concurrency correctness 
-and long-term maintainability of large C++ codebases. Although C++ remains the dominant language in embedded and 
-real-time systems due to its performance and mature ecosystem, 
-its reliance on manual memory management continues to be a major source of vulnerabilities. 
-Rust has emerged as a promising alternative, offering strong compile-time guarantees for memory safety 
-and data-race freedom without introducing garbage collection. 
-However, the adoption of Rust in industrial environments is hindered by the scale of existing C++ systems 
+The growing complexity of safety-critical software systems, particularly in the automotive domain,
+has intensified concerns regarding memory safety, concurrency correctness,
+and long-term maintainability of large C++ codebases. Although C++ remains the dominant language in embedded and
+real-time systems due to its performance and mature ecosystem,
+its reliance on manual memory management continues to be a major source of vulnerabilities.
+Rust has emerged as a promising alternative, offering strong compile-time guarantees for memory safety
+and data-race freedom without introducing garbage collection.
+However, the adoption of Rust in industrial environments is hindered by the scale of existing C++ systems
 and their deep dependence on template-heavy frameworks such as the Boost C++ Libraries.
 
-This dissertation investigates strategies for incrementally modernizing legacy C++ systems by integrating Rust in a safe 
-and performant manner. Focusing on Boost-based components commonly used in automotive software architectures, 
-it proposes a systematic methodology for selecting migration candidates, designing bidirectional interoperability interfaces, 
-and re-implementing critical functionality in Rust. The work explores \gls{FFI} patterns, 
-evaluates existing interoperability tools, and addresses the architectural challenges arising from the mismatch 
-between C++ templates and Rust’s ownership model.
+This dissertation investigates strategies for incrementally modernizing legacy C++ systems by integrating Rust in a safe
+and performant manner. Focusing on Boost-based components commonly used in automotive software architectures,
+it proposes a systematic methodology for selecting migration candidates, designing bidirectional interoperability interfaces,
+and re-implementing critical functionality in Rust. The work explores \gls{FFI} patterns,
+evaluates existing interoperability tools, and addresses the architectural challenges arising from the mismatch
+between C++ templates and Rust's ownership model.
 
-A Rust-based reimplementation of selected Boost components is developed and integrated into a hybrid C++/Rust system. 
-Performance, memory usage, and interoperability overhead are experimentally evaluated to quantify the benefits 
-and costs of this approach. The results demonstrate that incremental migration can significantly improve memory safety 
-while preserving determinism and performance, providing practical guidance for the adoption of Rust in high-assurance 
+A Rust-based reimplementation of selected Boost components is developed and integrated into a hybrid C++/Rust system.
+Performance, memory usage, and interoperability overhead are experimentally evaluated to quantify the benefits
+and costs of this approach. The results demonstrate that incremental migration can significantly improve memory safety
+while preserving determinism and performance, providing practical guidance for the adoption of Rust in high-assurance
 and safety-critical software systems.
 
 \end{abstract}

@@ -13,6 +13,12 @@ void              aligned_buffer_destroy(AlignedBufferF32* buf);
 void              aligned_buffer_double_avx(AlignedBufferF32* buf);
 void              double_f32_avx_raw(float* ptr, size_t len);
 
+// FFI Overhead Measurement Functions
+void              ffi_overhead_noop(void);
+void              ffi_overhead_single_op(float* ptr);
+void              ffi_overhead_kernel(float* ptr, size_t len);
+
+
 #ifdef __cplusplus
 }
 #endif

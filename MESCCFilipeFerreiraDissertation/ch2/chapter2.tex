@@ -53,7 +53,7 @@ preventing data races. \parencite{RustCppProgrammers}
 
 Scope and ownership code example:
 
-\begin{verbatim}
+\begin{lstlisting}[language=Rust]
     fn main() {
     // 1. SCOPE AND OWNERSHIP
     {
@@ -85,7 +85,7 @@ Scope and ownership code example:
     
     println!("Modified data: {}", r3);
 }
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{Tooling and ecosystem}
 An high quality tooling is a strong base of the Rust development environment. The integrated package manager \textbf{Cargo}, documentation generator \textbf{rustdoc} and built-in testing framework significantly enhance developer productivity. The Rust package registry, crates.io, is an important source of libraries for different applications.
@@ -169,7 +169,7 @@ and relies on the developer to ensure invariants \parencite{Stroustrup2020}.
 At following example is possible to see two threads modifying the same resource, the global variable \textbf{\textit{counter}}.
 The modification is concurrently leading to a undefined behavior.
 
-\begin{verbatim}
+\begin{lstlisting}[language=C++]
     #include <iostream>
     #include <thread>
     #include <vector>
@@ -195,7 +195,7 @@ The modification is concurrently leading to a undefined behavior.
         // Actual: Likely < 2000000 (e.g., 146377) due to race conditions [web:51]
         return 0;
 }
-\end{verbatim}
+\end{lstlisting}
 
 The incremental of \textbf{\textit{counter}}, \textbf{counter++}, is not atomic. 
 Usualy an incremental operation includes three steps: the load of the variable into a register, the value increment at the register
@@ -243,7 +243,7 @@ also amplify the complexity of introducing a Rust-based ownership model into exi
     This code uses a template, \texttt{async\_wait} from the library boost::asio. 
     It is not a compiled symbol in the library, is generated only when used. Rust is not able to link to it directly.
 
-    \begin{verbatim}
+    \begin{lstlisting}[language=C++]
         // async_engine.hpp
         #include <boost/asio.hpp>
         #include <iostream>
@@ -265,7 +265,7 @@ also amplify the complexity of introducing a Rust-based ownership model into exi
             boost::asio::io_context io_;
             boost::asio::steady_timer timer_;
         };
-    \end{verbatim}
+    \end{lstlisting}
 
     \item \textbf{Semantic opportunity}: Many Boost libraries were explicitly designed to encode disciplined resource management 
     and concurrency patterns, that anticipate concerns later formalized by Rust. 
@@ -290,7 +290,7 @@ also amplify the complexity of introducing a Rust-based ownership model into exi
     thereby reducing the impedance mismatch at the FFI boundary.
 
     A simulation of a shared configuration system based, it is usualy used in ROS/robotics systems.
-    \begin{verbatim}
+    \begin{lstlisting}[language=C++]
         #include <vector>
         #include <string>
         #include <iostream>
@@ -356,7 +356,7 @@ also amplify the complexity of introducing a Rust-based ownership model into exi
                 }
             }
         }
-    \end{verbatim}
+    \end{lstlisting}[language=C++]
 \end{itemize}
 
 \section{Interoperability between Rust and C++}
@@ -593,11 +593,12 @@ Rust effectively eliminates at compile time.
 
 \break
 
-As illustrated in Figure \ref{fig:rustpreventions}, approximately 56.9\% of these historical vulnerabilities fall into 
-the "Virtually Impossible" category, 
-meaning they would be prevented by Rust's strict type system and borrow checker without requiring runtime overhead. 
-Conversely, 29.3\% of vulnerabilities—primarily logic errors or domain-specific flaws—remain unpreventable by the 
-language choice alone \parencite{meneely2025just}.
+As illustrated in Figure \ref{fig:rustpreventions}, the vulnerabilities are distributed across several categories of potential prevention through Rust. 
+Approximately 15.0\% fall into the "Virtually Impossible" category, indicating vulnerabilities that can be prevented by 
+Rust's type system and ownership model. In contrast, approximately 70.2\% fall into the "No Help, or Langs Won't Help" category, 
+indicating vulnerabilities that cannot be prevented solely through the choice of programming language. 
+The remaining vulnerabilities fall into intermediate categories where prevention depends on language features, libraries, 
+compiler configurations, or development practices \parencite{meneely2025just}.
 
 Table 1 details the top 20 most common vulnerability types found in the subject projects. 
 The data confirms that the two most frequent issues, NULL Pointer Dereference (CWE-476) and Use After Free (CWE-416), 

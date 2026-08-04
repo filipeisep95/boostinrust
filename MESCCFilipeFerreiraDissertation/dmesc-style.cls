@@ -37,7 +37,7 @@
 %----------------------------------------------------------------------------------------
 
 \NeedsTeXFormat{LaTeX2e}[1996/12/01]
-\newcommand{\classname}{tmesc-style}
+\newcommand{\classname}{dmesc-style}
 \ProvidesClass{\classname}
 \providecommand{\baseclass}{book}
 
@@ -168,8 +168,16 @@
 \RequirePackage{booktabs} % Required for better table rules
 
 \RequirePackage{lmodern} % AMB: Latin Modern Roman for the text body (if needed serif font).
-\RequirePackage[defaultsans,scale=0.90]{opensans} % AMB: Sans serif font similar to Calibri and Aptos, as required by the ISEP template guidelines.
-\RequirePackage{inconsolata} % AMB Inconsolata mono space font for listings.
+\IfFileExists{opensans.sty}{%
+  \RequirePackage[defaultsans,scale=0.90]{opensans} % AMB: Sans serif font similar to Calibri and Aptos, as required by the ISEP template guidelines.
+}{%
+  \RequirePackage[scaled=0.95]{helvet} % Fallback sans-serif font when Open Sans is unavailable.
+}
+\IfFileExists{inconsolata.sty}{%
+  \RequirePackage{inconsolata} % AMB Inconsolata mono space font for listings.
+}{%
+  \RequirePackage{courier} % Fallback mono-spaced font when Inconsolata is unavailable.
+}
 
 \renewcommand{\familydefault}{\sfdefault} % AMB: The text body uses a sans serif typeface, as specified by the ISEP template guidelines.
 
@@ -336,8 +344,8 @@ KOMA-script documentation for details.}]{fancyhdr}
 %	TITLEPAGE PAGE DESIGN
 %----------------------------------------------------------------------------------------
 
-\newcommand{\dissertationdisclamer}{Dissertation Research Plan of the Master’s degree in Critical Computing Systems Engineering}
-\providecaptionname{american,australian,british,canadian,english,newzealand,UKenglish,USenglish}{\dissertationdisclamer}{Dissertation Research Plan of the Master’s degree in Critical Computing Systems Engineering}
+\newcommand{\dissertationdisclamer}{Dissertation submitted in partial fulfilment of the requirements for the\\ Master’s Degree in Critical Computing Systems Engineering}
+\providecaptionname{american,australian,british,canadian,english,newzealand,UKenglish,USenglish}{\dissertationdisclamer}{Dissertation submitted in partial fulfilment of the requirements for the \\ Master’s Degree in Critical Computing Systems Engineering}
 \providecaptionname{portuguese}{\dissertationdisclamer}{Disserta\c{c}\~ao submetida para satisfa\c{c}\~ao parcial dos requisitos do Grau de \\ Mestre em Engenharia de Sistemas Computacionais Críticos} % Portuguese 
 
 \newcommand{\supervisorlabel}{Supervisor}
