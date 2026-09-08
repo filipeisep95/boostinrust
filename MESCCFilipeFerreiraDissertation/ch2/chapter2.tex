@@ -53,7 +53,7 @@ preventing data races. \parencite{RustCppProgrammers}
 
 Scope and ownership code example:
 
-\begin{verbatim}
+\begin{lstlisting}[language=Rust]
     fn main() {
     // 1. SCOPE AND OWNERSHIP
     {
@@ -85,12 +85,19 @@ Scope and ownership code example:
     
     println!("Modified data: {}", r3);
 }
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{Tooling and ecosystem}
-An high quality tooling is a strong base of the Rust development environment. The integrated package manager \textbf{Cargo}, documentation generator \textbf{rustdoc} and built-in testing framework significantly enhance developer productivity. The Rust package registry, crates.io, is an important source of libraries for different applications.
+An high quality tooling is a strong base of the Rust development environment. 
+The integrated package manager \textbf{Cargo}, documentation generator \textbf{rustdoc} and built-in 
+testing framework significantly enhance developer productivity. The Rust package registry, crates.io, 
+is an important source of libraries for different applications.
 
-Beside the growing usage of Rust, it still relies on interoperability with C/C++ ecosystem, specially for low-level applications (eg. hardware interactions, graphics, legacy protocols). Interfacing Rust with foreign code is possible using through the \gls{FFI}. Usualy, an \gls{FFI} is functional and efficient but often requires carefull design of abstractions, specially when crossing language boundaries with different memory management models.
+Beside the growing usage of Rust, it still relies on interoperability with C/C++ ecosystem, 
+specially for low-level applications (eg. hardware interactions, graphics, legacy protocols). 
+Interfacing Rust with foreign code is possible using through the \gls{FFI}. Usualy, an \gls{FFI} is 
+functional and efficient but often requires carefull design of abstractions, specially when crossing language 
+boundaries with different memory management models.
 
 \subsubsection{Adoption and Industrial Applications}
 Rust has been adopted by several domains, as:
@@ -108,7 +115,8 @@ Rust has been adopted by several domains, as:
 \subsection{C++}
 
 C++ is currently the dominant programming language due to its extensive ecosystem. 
-It has hardware specific libraries, mature compilers, profiling and debugging tools and frameworks for high-performance computing. 
+It has hardware specific libraries, mature compilers, profiling and debugging tools and frameworks for 
+high-performance computing. 
 Is also used for a large group of companies for many years \parencite{stroustrup2013cpp}. 
 It leads to massive codebases, thousands of lines of code that make large rewrites infeasible \parencite{CppCon2020}.
 
@@ -147,7 +155,8 @@ It leads to the following unsafe behaviors:
     \item Reliance on undefined behaviors \parencite{stroustrup2013cpp}.
 \end{itemize}
 
-Industry data confirms that memory-unsafe languages (primarily C and C++) account for the majority of security vulnerabilities. 
+Industry data confirms that memory-unsafe languages (primarily C and C++) account for the majority of 
+security vulnerabilities. 
 Google reports that 70\% of Chrome vulnerabilities stem from memory safety bugs \parencite{google2022memory}, 
 and Microsoft reports similar figures across Windows components \parencite{msrc2020memory}. 
 Although modern C++ attempts to mitigate issues through smart pointers and safer API design, 
@@ -169,7 +178,7 @@ and relies on the developer to ensure invariants \parencite{Stroustrup2020}.
 At following example is possible to see two threads modifying the same resource, the global variable \textbf{\textit{counter}}.
 The modification is concurrently leading to a undefined behavior.
 
-\begin{verbatim}
+\begin{lstlisting}[language=C++]
     #include <iostream>
     #include <thread>
     #include <vector>
@@ -195,15 +204,16 @@ The modification is concurrently leading to a undefined behavior.
         // Actual: Likely < 2000000 (e.g., 146377) due to race conditions [web:51]
         return 0;
 }
-\end{verbatim}
+\end{lstlisting}
 
 The incremental of \textbf{\textit{counter}}, \textbf{counter++}, is not atomic. 
-Usualy an incremental operation includes three steps: the load of the variable into a register, the value increment at the register
-and the value store back at the memory.
+Usualy an incremental operation includes three steps: the load of the variable into a register, 
+the value increment at the register and the value store back at the memory.
 
-When this operation is not protected by locking (e.g. using threads) or atomic types (\textbf{std::atomic<int>}), both threads
-can load the same value from memory, increment it and store it, simultaneously. Since the initial value is the same, instead of
-expected increment by 2 it only will increment by 1.
+When this operation is not protected by locking (e.g. using threads) or atomic types (\textbf{std::atomic<int>}), 
+both threads
+can load the same value from memory, increment it and store it, simultaneously. Since the initial value is the same, 
+instead of expected increment by 2 it only will increment by 1.
 
 \subsection{Boost C++ Libraries}
 The Boost C++ Libraries are a comprehensive collection of peer-reviewed, portable, and open-source 
@@ -219,8 +229,9 @@ enabled developers to adopt it. \parencite{boost_docs}
 The Boost libraries have, historically, served as the proving ground for the C++ Standard Library. 
 Boost provide high-quality, peer-reviewed, and largely header-only components that target portability 
 and performance across platforms. \parencite{boost_docs} 
-This ubiquity creates a unique dichotomy during migration, because the same abstractions that enabled modern C++ design patterns 
-also amplify the complexity of introducing a Rust-based ownership model into existing codebases.
+This ubiquity creates a unique dichotomy during migration, because the same abstractions that enabled 
+modern C++ design patterns  also amplify the complexity of introducing a Rust based ownership model 
+into existing codebases.
 
 \begin{itemize}
     \item \textbf{Technical mismatch}: Boost utilizes advanced C++ features such as template metaprogramming, 
@@ -232,9 +243,8 @@ also amplify the complexity of introducing a Rust-based ownership model into exi
     These constructs don't have direct equivalents in Rust's generic system and trait bounds, 
     particularly when combined with partial specialization and ADL-dependent overload sets. 
     As a consequence, standard automated binding tools (such as \texttt{bindgen} \parencite{bindgen_docs}) 
-    are ill-suited to interface with Boost's 
-    header-only, template-heavy design: the absence of concrete, non-templated symbols at the ABI level often forces developers 
-    to introduce intermediate C-compatible facades. 
+    are ill-suited to interface with Boost's header-only, template-heavy design: the absence of concrete, 
+    non-templated symbols at the ABI level often forces developers to introduce intermediate C-compatible facades. 
     
     These facades are typically handwritten wrappers that manually erase templates 
     into plain C types or opaque handles, reintroducing the same classes of human error (lifetime mismatches, 
@@ -243,7 +253,7 @@ also amplify the complexity of introducing a Rust-based ownership model into exi
     This code uses a template, \texttt{async\_wait} from the library boost::asio. 
     It is not a compiled symbol in the library, is generated only when used. Rust is not able to link to it directly.
 
-    \begin{verbatim}
+    \begin{lstlisting}[language=C++]
         // async_engine.hpp
         #include <boost/asio.hpp>
         #include <iostream>
@@ -265,9 +275,10 @@ also amplify the complexity of introducing a Rust-based ownership model into exi
             boost::asio::io_context io_;
             boost::asio::steady_timer timer_;
         };
-    \end{verbatim}
+    \end{lstlisting}
 
-    \item \textbf{Semantic opportunity}: Many Boost libraries were explicitly designed to encode disciplined resource management 
+    \item \textbf{Semantic opportunity}: Many Boost libraries were explicitly designed to encode disciplined 
+    resource management 
     and concurrency patterns, that anticipate concerns later formalized by Rust. 
     Boost.SmartPtr library encapsulates ownership and shared lifetime through types, such as 
     \texttt{boost::shared\_ptr} and \texttt{boost::scoped\_ptr}. 
@@ -282,15 +293,16 @@ also amplify the complexity of introducing a Rust-based ownership model into exi
     The migration opportunity lies in systematically leveraging these ``vocabulary types'' as a pivot layer: 
     raw pointers and ad hoc ownership conventions at subsystem boundaries are first refactored into Boost abstractions, 
     which can then be mechanically mapped to Rust equivalents 
-    (for example, \texttt{\texttt{boost::shared\_ptr<T>} $\rightarrow$ \texttt{std::sync::Arc<T>}, 
-    \texttt{boost::optional<T>} $\rightarrow$ \texttt{Option<T>}, or \texttt{boost::variant} $\rightarrow$ a Rust \texttt{enum}}). 
+    (for example, \verb|boost::shared_ptr<T>| $\rightarrow$ \verb|std::sync::Arc<T>|,
+\verb|boost::optional<T>| $\rightarrow$ \verb|Option<T>|, or
+\verb|boost::variant| $\rightarrow$ a Rust \texttt{enum}).
 
     Treating Boost as a semantic bridge rather than a legacy liability allows the migration process to 
     progressively tighten ownership and error-handling contracts on the C++ side before introducing Rust, 
     thereby reducing the impedance mismatch at the FFI boundary.
 
     A simulation of a shared configuration system based, it is usualy used in ROS/robotics systems.
-    \begin{verbatim}
+    \begin{lstlisting}[language=C++]
         #include <vector>
         #include <string>
         #include <iostream>
@@ -356,7 +368,7 @@ also amplify the complexity of introducing a Rust-based ownership model into exi
                 }
             }
         }
-    \end{verbatim}
+    \end{lstlisting}[language=C++]
 \end{itemize}
 
 \section{Interoperability between Rust and C++}
@@ -373,10 +385,12 @@ without sacrificing the stability of massive legacy investments.
 \subsection{Undefined Behavior and Vulnerability Mitigation}
 A primary driver for this migration is the prevalence of undefined behavior in legacy C/C++ codebases, 
 which often manifests as security vulnerabilities. 
-A best-case historical study of open-source vulnerabilities indicates that approximately 58.2\% of historical vulnerabilities 
+A best-case historical study of open-source vulnerabilities indicates that approximately 58.2\% of 
+historical vulnerabilities 
 in prominent C projects would have been virtually impossible in safe Rust. \parencite{meneely2025just} 
 
-Code vulnerabilities are formally listed at \gls{CWE}. \gls{CWE} was community developed and list common software and hardware
+Code vulnerabilities are formally listed at \gls{CWE}. \gls{CWE} was community developed and list 
+common software and hardware
 weakness types. 
 
 Some critical vulnerabilities detected were:
@@ -398,9 +412,9 @@ necessitating further static analysis or refactoring to achieve true safety. \pa
 
 \subsection{The Safety Air Gap in Hybrid Architectures}
 
-Hybrid architectures are structural design patterns that allow two languages to coexist in a single system, as systems with 
-C++ and Rust. They share the same low-level control but have different compilation models and safety guarantees. Due to it 
-the architecture should focus on isolating the boundary to minimize friction.
+Hybrid architectures are structural design patterns that allow two languages to coexist in a single system, 
+as systems with C++ and Rust. They share the same low-level control but have different compilation models and 
+safety guarantees. Due to it the architecture should focus on isolating the boundary to minimize friction.
 
 Since big-bang rewrites, a software strategy where a system is rebuilt from scratch (rewriting a C++ system in Rust), 
 are resource-prohibitive, organizations are forced into incremental migration.
@@ -408,9 +422,15 @@ are resource-prohibitive, organizations are forced into incremental migration.
 This creates a prolonged hybrid state where Rust modules must coexist with legacy C++:
 
 \begin{itemize}
-    \item \textbf{FFI vulnerabilities}: Rust's safety guarantees (ownership, borrow checking) strictly end at the Foreign Function Interface (FFI) boundary. Crossing this boundary destroys safety unless rigorously wrapped, creating a safety air gap. Dynamic analysis tools like Rustcheck have been proposed to detect memory safety issues specifically arising from unsafe Rust usage at these boundaries. \parencite{xia2023rustcheck}
-    \item \textbf{Integration risks}: Passing complex Boost data structures across the FFI boundary introduces risks of unsafe pointer usage, exception mismatches, and memory leaks.
-    \item \textbf{Concurrency conflicts}: Bridging Boost.Asio or Boost.Thread with Rust's concurrency model can lead to undefined behavior, specifically when distinct async runtimes or threading models attempt to interoperate without a unified strategy.
+    \item \textbf{FFI vulnerabilities}: Rust's safety guarantees (ownership, borrow checking) strictly end at 
+    the Foreign Function Interface (FFI) boundary. Crossing this boundary destroys safety unless rigorously wrapped, 
+    creating a safety air gap. Dynamic analysis tools like Rustcheck have been proposed to detect memory safety issues 
+    specifically arising from unsafe Rust usage at these boundaries. \parencite{xia2023rustcheck}
+    \item \textbf{Integration risks}: Passing complex Boost data structures across the FFI boundary introduces risks 
+    of unsafe pointer usage, exception mismatches, and memory leaks.
+    \item \textbf{Concurrency conflicts}: Bridging Boost.Asio or Boost.Thread with Rust's concurrency model can lead to 
+    undefined behavior, specifically when distinct async runtimes or threading models attempt to interoperate 
+    without a unified strategy.
 \end{itemize}
 
 \subsection{Systematic Porting vs. the Rewrite Trap}
@@ -418,11 +438,16 @@ A lack of structured methodology often leads to the rewrite trap stalled develop
 porting feature-rich systems.
 
 \begin{itemize}
-    \item \textbf{Performance overhead}: FFI boundaries introduce latency (10–20\% overhead in some cases) due to data marshalling. In latency-sensitive domains (HPC, HFT), an ad hoc porting strategy that places FFI boundaries in hot loops is unacceptable.
-    \item \textbf{Missing methodology}: There is currently no standardized process for decomposing a Boost-heavy application into portable units. Developers need a systematic way to identify architectural seams where the cost of the FFI boundary is minimized and the safety value of Rust is maximized.
+    \item \textbf{Performance overhead}: FFI boundaries introduce latency (10–20\% overhead in some cases) due to 
+    data marshalling. In latency-sensitive domains (HPC, HFT), an ad hoc porting strategy that places FFI boundaries 
+    in hot loops is unacceptable.
+    \item \textbf{Missing methodology}: There is currently no standardized process for decomposing a Boost-heavy 
+    application into portable units. Developers need a systematic way to identify architectural seams where the cost of 
+    the FFI boundary is minimized and the safety value of Rust is maximized.
 \end{itemize}
 
-The central problem is not just the translation of code, but the architectural interoperability of two diverging memory models. 
+The central problem is not just the translation of code, but the architectural interoperability of two diverging 
+memory models. 
 The challenge is to define a strategy that stops treating Boost as legacy debt to be discarded and starts utilizing it 
 as a stabilizing intermediate layer.
 
@@ -468,59 +493,79 @@ At this moment has no source code \parencite{boosters_crate}.
 On other side, there are some Rust native equivalents to Boost C++ at Crates.io that are safer and faster. 
 At the following table is possible to check some equivalents \parencite{crates_io}.
 
-\begin{table}[h!]
-\centering
-\begin{tabular}{|l|l|l|}
-\hline
-\textbf{Boost Library} & \textbf{Rust Equivalent} & \textbf{Notes} \\ \hline
+\begin{table}[H]
+    \centering
 
-Boost.Asio & \texttt{tokio}, \texttt{async-std} &
-Async I\/O, networking, event loop \\ \hline
+    \begin{tabular}{|l|l|l|}
+        \hline
+        \textbf{Boost Library} &
+        \textbf{Rust Equivalent} &
+        \textbf{Notes} \\ \hline
 
-Boost.Beast & \texttt{hyper}, \texttt{reqwest} &
-HTTP client\/server, WebSockets \\ \hline
+        Boost.Asio &
+        \texttt{tokio}, \texttt{async-std} &
+        Async I/O, networking, event loop \\ \hline
 
-Boost.Filesystem & \texttt{std::fs}, \texttt{std::path} &
-Native filesystem support in Rust stdlib \\ \hline
+        Boost.Beast &
+        \texttt{hyper}, \texttt{reqwest} &
+        HTTP client/server, WebSockets \\ \hline
 
-Boost.ProgramOptions & \texttt{clap}, \texttt{argh}, \texttt{pico-args} &
-Command-line parsing \\ \hline
+        Boost.Filesystem &
+        \texttt{std::fs}, \texttt{std::path} &
+        Native filesystem support in Rust stdlib \\ \hline
 
-Boost.Serialization & \texttt{serde} &
-General-purpose serialization framework \\ \hline
+        Boost.ProgramOptions &
+        \texttt{clap}, \texttt{argh}, \texttt{pico-args} &
+        Command-line parsing \\ \hline
 
-Boost.Regex & \texttt{regex} &
-Fast regular expression engine \\ \hline
+        Boost.Serialization &
+        \texttt{serde} &
+        General-purpose serialization framework \\ \hline
 
-Boost.Optional & \texttt{Option<T>} &
-Built-in language feature \\ \hline
+        Boost.Regex &
+        \texttt{regex} &
+        Fast regular expression engine \\ \hline
 
-Boost.Variant & \texttt{enum}, \texttt{enum\_dispatch} &
-Tagged unions \/ sum types \\ \hline
+        Boost.Optional &
+        \texttt{Option<T>} &
+        Built-in language feature \\ \hline
 
-Boost.Any & \texttt{dyn Any} &
-Type-erased storage \\ \hline
+        Boost.Variant &
+        \texttt{enum}, \texttt{enum\_dispatch} &
+        Tagged unions / sum types \\ \hline
 
-Boost.Graph & \texttt{petgraph} &
-Graph algorithms and data structures \\ \hline
+        Boost.Any &
+        \texttt{dyn Any} &
+        Type-erased storage \\ \hline
 
-Boost.Geometry & \texttt{geo}, \texttt{geo-types} &
-Computational geometry \\ \hline
+        Boost.Graph &
+        \texttt{petgraph} &
+        Graph algorithms and data structures \\ \hline
 
-Boost.SmartPtr & \texttt{Box}, \texttt{Rc}, \texttt{Arc} &
-Memory management primitives \\ \hline
+        Boost.Geometry &
+        \texttt{geo}, \texttt{geo-types} &
+        Computational geometry \\ \hline
 
-Boost.Thread & \texttt{std::thread}, \texttt{crossbeam} &
-Threading and concurrency \\ \hline
+        Boost.SmartPtr &
+        \texttt{Box}, \texttt{Rc}, \texttt{Arc} &
+        Memory management primitives \\ \hline
 
-Boost.Lockfree & \texttt{crossbeam}, \texttt{loom} &
-Lock-free data structures \\ \hline
+        Boost.Thread &
+        \texttt{std::thread}, \texttt{crossbeam} &
+        Threading and concurrency \\ \hline
 
-Boost.Coroutine & \texttt{async}/\texttt{await} (built-in), \texttt{futures} &
-Cooperative concurrency \\ \hline
+        Boost.Lockfree &
+        \texttt{crossbeam}, \texttt{loom} &
+        Lock-free data structures \\ \hline
 
-\end{tabular}
-\caption{Rust ecosystem crates that replace common Boost C++ Libraries.}
+        Boost.Coroutine &
+        \texttt{async}/\texttt{await} (built-in), \texttt{futures} &
+        Cooperative concurrency \\ \hline
+
+    \end{tabular}
+
+    \caption{Rust ecosystem crates that replace common Boost C++ libraries.}
+    \label{tab:boost-rust-equivalents}
 \end{table}
 
 \break
@@ -593,11 +638,12 @@ Rust effectively eliminates at compile time.
 
 \break
 
-As illustrated in Figure \ref{fig:rustpreventions}, approximately 56.9\% of these historical vulnerabilities fall into 
-the "Virtually Impossible" category, 
-meaning they would be prevented by Rust's strict type system and borrow checker without requiring runtime overhead. 
-Conversely, 29.3\% of vulnerabilities—primarily logic errors or domain-specific flaws—remain unpreventable by the 
-language choice alone \parencite{meneely2025just}.
+As illustrated in Figure \ref{fig:rustpreventions}, the vulnerabilities are distributed across several categories of potential prevention through Rust. 
+Approximately 15.0\% fall into the "Virtually Impossible" category, indicating vulnerabilities that can be prevented by 
+Rust's type system and ownership model. In contrast, approximately 70.2\% fall into the "No Help, or Langs Won't Help" category, 
+indicating vulnerabilities that cannot be prevented solely through the choice of programming language. 
+The remaining vulnerabilities fall into intermediate categories where prevention depends on language features, libraries, 
+compiler configurations, or development practices \parencite{meneely2025just}.
 
 Table 1 details the top 20 most common vulnerability types found in the subject projects. 
 The data confirms that the two most frequent issues, NULL Pointer Dereference (CWE-476) and Use After Free (CWE-416), 

@@ -1,0 +1,407 @@
+\chapter{Selected libraries}
+\label{chap:Chapter6}
+
+This chapter presents the selected Boost libraries for reimplementation in Rust.
+The selection is based on several criteria, including their relevance to automotive software architectures, implementation characteristics, 
+complexity and the potential benefits that a Rust implementation may provide in terms of memory safety, reliability and performance.
+
+The selected libraries are: \texttt{Boost.Align} and \texttt{Boost.Endian}. Both libraries provide relatively low-level functionality
+that is relevant to systems programming and embedded software, while also exposing functionality that interacts closely with memory
+representation and processor architecture. These characteristics make them suitable candidates for evaluating the feasibility of 
+reproducing existing C++ functionality using idiomatic Rust.
+
+For each selected library, this chapter provides an overview of its purpose and functionality, describes its main components and discusses
+its relevance to automotive software development. The chapter also identifies the main challenges associated with reimplementing the library
+in Rust, including differences between the C++ and Rust memory models, language abstractions, portability requirements and interoperability
+with existing C++ codebases.
+
+\section{Boost.Align}
+\subsection{Overview}
+
+The \texttt{Boost.Align} library provides functions, classes, templates, traits and macros, for controlling, inspecting and diagnosing 
+memory alignment. Its primary purpose is to provide portable alignment-related functionality across different compilers, standard library
+implementations and language standards.
+
+Memory alignment refers to the requirement that an object is stored at a memory address satisfying a particular alignment constraint. 
+For example, a type with an alignment requirement of 8 bytes must generally be placed at an address divisible by 8. 
+Alignment requirements are determined by the target architecture and by the type being stored. 
+Correct alignment is important because processors may impose restrictions on the addresses from which particular types can be accessed. 
+Even on architectures that support unaligned accesses, aligned accesses can provide more predictable and efficient memory operations.
+
+Alignment is particularly relevant to low-level and performance-sensitive software. 
+Incorrectly aligned objects may result in inefficient memory accesses or, on architectures with stricter alignment requirements, hardware faults.
+In C++, violating the alignment requirements of an object can also result in undefined behavior. 
+Consequently, explicit control over memory alignment can be important when implementing data structures, 
+custom allocators, memory pools, serialization mechanisms, and other low-level components.
+
+Before C++ 11, the language provided limited standardized facilities for expressing and manipulating alignment requirements.
+Boost.Align addressed this limitation by providing portable alignment utilities that could be used in C++03 code and 
+across implementations with incomplete or inconsistent support for newer alignment-related facilities.
+
+C++11 introduced standardized support for specifying alignment requirements through language and library facilities. 
+In particular, the language introduced alignment specifications through \texttt{alignas}, 
+while the standard library introduced facilities such as \texttt{std::align}. 
+However, compiler and standard library support was not always complete or consistent at the time Boost.Align was developed. 
+The library therefore also provided portable implementations and compatibility facilities for environments in which 
+the corresponding standard functionality was unavailable or unreliable.
+
+\subsection{Functionality}
+
+Boost.Align provides functionality for both dynamic memory allocation and pointer alignment.
+Its facilities can broadly be divided into allocation, pointer alignment, alignment inspection, and alignment diagnostics.
+
+For dynamic memory allocation, the library provides:
+
+\begin{itemize}
+\item \texttt{aligned\_alloc(alignment, size)}, which allocates a block of memory satisfying a specified alignment requirement;
+\item \texttt{aligned\_free(ptr)}, which releases memory previously allocated using the corresponding aligned allocation mechanism.
+\end{itemize}
+
+These functions are useful when the default allocation provided by the runtime or standard library does not guarantee 
+the alignment required by an application or data structure.
+
+The library also provides allocator abstractions, including:
+
+\begin{itemize}
+\item \verb|aligned_allocator<T>|.;
+\item \verb|aligned_allocator_adaptor<Allocator>|.;
+\item \item \verb|aligned_delete<T>|..
+\end{itemize}
+
+The allocator abstractions allow alignment requirements to be integrated with C++ allocation mechanisms and standard containers.
+This is particularly useful for containers whose elements must satisfy an alignment requirement greater than 
+the default alignment provided by the allocator.
+
+Another important part of Boost.Align concerns pointer alignment.
+The library provides an implementation of functionality equivalent to \texttt{std::align}, 
+allowing a pointer within an available memory region to be adjusted to satisfy a requested alignment 
+while preserving the required amount of available storage.
+
+This functionality is relevant when implementing custom memory-management mechanisms.
+For example, an application may reserve a larger memory region and subsequently divide it into several aligned regions for different objects.
+Explicit pointer alignment allows such regions to be placed at addresses compatible with the alignment requirements of the objects they contain.
+
+The library additionally provides facilities for querying and inspecting alignment requirements.
+These capabilities allow software to determine the alignment associated with a type or address and 
+to verify whether an address satisfies a particular alignment constraint. 
+Such facilities are useful when implementing generic low-level components where the alignment requirements cannot be assumed statically.
+
+\subsection{Relevance to automotive software}
+
+Memory alignment is particularly relevant to automotive software because many automotive systems operate under strict constraints 
+regarding performance, memory consumption, determinism, and hardware compatibility. Software components may interact directly with hardware, 
+communication buffers, memory-mapped data, DMA regions, or specialized data structures whose layout and alignment must be carefully controlled.
+
+For example, an automotive application may process large collections of sensor data or 
+communication frames using structures with specific alignment requirements. 
+Correct alignment can contribute to efficient memory accesses and may be necessary to satisfy 
+the requirements of a particular processor or hardware interface.
+
+Alignment can also become important when software is designed to run across multiple processor architectures. 
+Automotive platforms may use different CPU architectures and compiler toolchains, each with potentially different alignment characteristics. 
+A portable abstraction for alignment can therefore reduce the amount of platform-specific code required by a software component.
+
+Furthermore, automotive software frequently contains legacy C++ codebases that were developed before the widespread availability 
+of modern C++ standards. Such systems may continue to rely on Boost libraries to provide functionality 
+that was historically unavailable or insufficiently portable in the C++ language and standard library.
+
+Although many of the capabilities historically provided by Boost.Align are now available through modern C++ language and 
+standard library facilities, Boost.Align remains relevant when maintaining or migrating legacy systems. 
+Reimplementing these facilities in Rust therefore provides an opportunity 
+to investigate how low-level memory-management functionality originally designed for C++ can be expressed 
+using Rust's stronger type system and ownership model.
+
+\subsection{Challenges of reimplementation in Rust}
+
+Reimplementing Boost.Align in Rust presents several challenges. 
+The most significant is the interaction between explicit memory alignment and Rust's safety guarantees.
+
+Rust provides alignment information as part of its type system and guarantees that references 
+to properly typed values satisfy the corresponding alignment requirements. 
+However, operations involving raw pointers, manually allocated memory, and custom allocation strategies 
+may require the use of \texttt{unsafe} code. 
+Consequently, an implementation of Boost.Align-like functionality must carefully isolate unsafe operations and 
+ensure that the safety invariants expected by the Rust type system are preserved.
+
+Dynamic aligned allocation is another important consideration. 
+Rust's allocation APIs allow an allocation to be described through a \texttt{Layout}, 
+which contains both the size and alignment of the requested memory region. 
+This provides a natural abstraction for implementing functionality similar to Boost.Align's aligned allocation mechanisms. 
+Nevertheless, the implementation must correctly handle invalid layouts, allocation failures, deallocation, 
+and the relationship between an allocation's size and alignment.
+
+Pointer alignment presents an additional challenge because it requires reasoning about raw memory addresses and available storage. 
+A Rust implementation must ensure that pointer arithmetic does not violate the language's safety requirements and 
+that any resulting pointer is only converted into a reference when all required invariants are satisfied.
+
+Allocator integration also differs significantly between C++ and Rust. 
+Boost.Align integrates with the C++ allocator model and standard containers, 
+whereas Rust uses the \texttt{GlobalAlloc} and allocator-related abstractions available in the language ecosystem. 
+Therefore, a direct translation of the C++ interfaces would not necessarily result in an idiomatic Rust implementation. 
+Instead, the reimplementation should preserve the observable semantics of the original library while adapting its interface to Rust's ownership, 
+borrowing, and allocation abstractions.
+
+Finally, portability must be considered. 
+The original Boost library was designed to compensate for differences between compilers and standard library implementations. 
+A Rust implementation should therefore be evaluated across the relevant target architectures and 
+toolchains to determine whether its behavior is consistent and whether platform-specific assumptions have been introduced.
+
+\subsection{Rationale for selection}
+
+Boost.Align was selected because it represents a low-level library whose functionality is closely related to memory management and 
+processor architecture. It therefore provides a useful case study for evaluating the migration of C++ systems-level functionality to Rust.
+
+The library is also particularly suitable for examining the boundary between safe and unsafe Rust. 
+While many high-level uses of aligned data can be expressed safely through Rust's type system, 
+explicit allocation and pointer manipulation require lower-level primitives. 
+This makes Boost.Align useful for assessing whether Rust can provide a safer abstraction around functionality 
+that traditionally requires careful manual reasoning in C++.
+
+In addition, Boost.Align provides a relatively compact and well-defined API while still containing several distinct concepts, 
+including alignment calculation, pointer manipulation, dynamic allocation, and allocator integration. 
+This provides sufficient implementation complexity to evaluate the migration methodology without making the selected library unnecessarily large.
+
+Although alignment support has substantially improved in modern C++ and much of the functionality 
+provided by Boost.Align is now represented by standard C++ facilities, 
+the library remains relevant when dealing with older C++ codebases and portability requirements. 
+Its reimplementation in Rust can therefore demonstrate how existing low-level C++ infrastructure can be reproduced 
+while taking advantage of Rust's memory-safety guarantees and modern abstractions.
+
+The original Boost.Align documentation and source code were used as the primary references for the analysis and subsequent reimplementation:
+
+\begin{itemize}
+\item \url{https://github.com/boostorg/align/blob/boost-1.91.0/doc/align.qbk}
+\item \url{https://www.boost.org/library/latest/align/}
+\item \url{https://www.boost.org/doc/libs/latest/doc/html/align.html}
+\end{itemize}
+
+\section{Boost.Endian}
+\subsection{Overview}
+
+The \texttt{Boost.Endian} library provides facilities for manipulating the byte order, or endianness, of integer and 
+user-defined types. Endianness defines the order in which the individual bytes of a multi-byte value are represented in
+the memory. The two predominant byte-ordering schemes are little-endian, where the least significant byte is stored 
+first, and big endian, where the most significant byte is stored first.
+
+Endianness is generally transparent to application level software when the data remains within a single system.
+However, it becomes relevant when binary data is exchanged between systems, stored in files, transmitted over networks,
+or interpreted by software running on different processor architectures. In such cases, the representation of a value
+in memory may differ from the representation expected by the receiving system.
+
+As example, considering a 16-bit value such as \texttt{0x0102} is represented as the byte sequence \texttt{0x01 0x02} 
+on a big-endian system and as \texttt{0x02 0x01} on a little-endian system. If the byte representation 
+is interpreted without considering its endianness, the received application may obtain a different numerical value, 
+leading to incorrect behavior or data corruption. Consequently, explicitly defining and handling byte order 
+is an important requirement for portable binary data formats and communication protocols.
+
+Boost.Endian was developed to provide a portable and consistent abstraction for these operations. The library supports 
+binary data portability independently of the native endianness of the host platform and provides a common interface
+across different C++ environments. It also addresses a secondary use case involving data size optimization by 
+providing integer representations with sizes that are not directly available as standard C++ integer types, 
+such as 24-bit, 40-bit and 48-bit integers. These types can be useful when implementing compact binary data formats or communication protocols.
+
+The library is header only and in its current version, requires C++11. It can make use of compiler provided byte swapping intrinsics 
+when available, allowing implementations to take advantage of architecture specific instructions while retaining a portable interface.
+
+\subsection{Functionality}
+
+Boost.Endian provides three complementary approaches for working with endian dependent data: endian conversion functions,
+endian buffer types and endian arithmetic types. Each approach is designed for a different balance between explicitness, 
+ease of use, performance and control over when conversions take place.
+
+\subsubsection{Endian conversion functions}
+
+The conversion function approach uses the standard C++ integer types to store values and explicitly converts their representation 
+when required. The library provides both mutating and non-mutating conversion operations, including unconditional and conditional variants.
+
+For example, an application can convert a value from big endian to the native byte order before performing calculations and convert
+it back before writing the value to an external representation. This approach makes the conversion points explicit and is 
+particularly appropriate when an application already has an established data model based on the native C++ types.
+
+The conversion functions also provide a relatively direct abstraction over underlying processor byte swapping operations. When compiler
+intrinsics are available, Boost.Endian can use them to generate efficient machine code.
+
+\subsubsection{Endian buffer types}
+
+Endian buffer types store values in a representation with a specified byte order. Unlike ordinary native integer types,
+the representation maintained by the buffer does not change depending on the host architecture.
+
+The library provides buffer types for a range of integer sizes, including 8-bit, 16-bit, 24-bit, 32-bit, 40-bit, 48-bit, 56-bit
+and 64-bit integers. Both aligned and unaligned representations are available, with unaligned representations being particularly
+useful when dealing with tightly packed binary formats.
+
+An important characteristic of buffer types is that the conversions are explicit. A value must be explicitly loaded from or stored
+into the endian representation. This prevents hidden conversions and gives the programmer precise control over when byte order 
+transformation occurs.
+
+This property is useful for binary protocols and file formats where the in memory representation must remain stable regardless 
+of the architecture on which the software is executed.
+
+\subsubsection{Endian arithmetic types}
+
+Endian arithmetic types combine a fixed byte-order representation with an interface similar to the built-in C++ arithmetic types. 
+They support arithmetic operations while automatically performing the required conversions between the stored representation and 
+the native representation.
+
+This approach simplifies application code because explicit conversions do not have to be performed for every arithmetic operation. 
+For example, an application can maintain a structure containing big-endian integer fields and operate on those fields 
+using normal arithmetic expressions.
+
+The convenience of implicit conversion comes with a potential performance trade-off. 
+Repeated operations on endian arithmetic types may result in repeated conversions, particularly inside computationally intensive loops. 
+Boost.Endian therefore also documents patterns for moving conversions outside performance-critical loops when necessary.
+
+\subsection{Binary data portability}
+
+One of the primary motivations for Boost.Endian is binary data portability. 
+Binary formats frequently specify the exact byte ordering and size of their fields. Unlike textual representations, 
+binary formats cannot rely on the receiving system to interpret values according to its native representation.
+
+This is particularly important for network protocols, file formats, serialization systems, and inter-process communication mechanisms. 
+A data structure containing several integer fields may have to be transmitted from a little-endian processor to another system 
+whose native representation is different. 
+Explicitly representing the required byte order ensures that the same logical value is reconstructed at the destination.
+
+Boost.Endian therefore separates the representation of externally defined binary data from the native representation of the host machine. 
+This allows the application to use a consistent representation for data exchanged with external systems 
+while remaining independent of the processor's native byte order.
+
+The library also supports unaligned integer representations. 
+This is useful for binary formats where fields are packed without the padding that would normally be introduced by C++ object alignment. 
+Boost.Endian specifically identifies unaligned 24-, 40-, 48-, and 56-bit representations as useful 
+when the exact size of the external representation matters.
+
+\subsection{Relevance to automotive software}
+
+Endianness is particularly relevant to automotive software because modern automotive systems consist of heterogeneous hardware 
+and software components that communicate using precisely defined binary data formats.
+
+Automotive systems commonly exchange data between electronic control units, sensors, gateways, communication interfaces, 
+and higher-level computing platforms. These components may use different processors, operating systems, compilers, and software stacks. 
+Consequently, communication interfaces cannot generally rely on the native representation of a particular processor.
+
+The problem becomes particularly relevant when software processes binary communication frames or serialized data structures. 
+A protocol may define a field as a 16-bit or 32-bit integer with a specific byte ordering, 
+independently of the architecture executing the software. 
+The implementation must therefore interpret the field according to the protocol definition rather than according to the host architecture.
+
+This characteristic makes endian handling relevant to automotive communication stacks, serialization libraries, diagnostic protocols, 
+and other components operating close to hardware and communication interfaces.
+
+The relevance of these concerns is also reflected in modern automotive software platforms. 
+The Eclipse S-CORE project, for example, is an open-source initiative focused on a software-defined vehicle platform 
+and provides an example of the increasing role of modern software architectures and cross-platform technologies in automotive systems.
+
+For an automotive software architecture, using explicit endian-aware representations can therefore help establish a clear boundary 
+between the internal representation of application data and the representation required by an external communication or storage format.
+
+\subsection{Memory representation and portability}
+
+Boost.Endian is also relevant to portability because it avoids assuming that the host architecture uses the same byte order 
+as the external data source.
+
+A naïve implementation may interpret a binary structure directly through a native C++ structure. 
+Such an approach can introduce portability problems because the resulting representation can depend on the processor's endianness, 
+alignment requirements, padding rules, and compiler behavior.
+
+For example, a structure containing several native integer fields cannot necessarily be treated as a portable representation 
+of a network or file format simply by writing its memory contents directly to a file or communication channel. 
+The representation of the fields may differ between platforms, and additional padding may be introduced by the compiler.
+
+Endian-aware types provide a mechanism for explicitly representing the byte order required by the external format. 
+This allows the application to distinguish between the representation used for communication and the representation used 
+internally for computation.
+
+This distinction is particularly valuable in safety- and reliability-oriented systems because it makes assumptions about 
+binary representation explicit rather than relying on implicit properties of the target architecture.
+
+\subsection{Performance considerations}
+
+Byte-order conversion is generally a low-level operation that can be implemented efficiently using processor instructions. 
+Boost.Endian takes advantage of compiler intrinsics when available, including byte-swap operations provided by GCC, Clang, 
+and Microsoft Visual C++.
+
+The performance characteristics of the different Boost.Endian approaches depend on how frequently conversions occur. 
+When conversion functions are used, the programmer can explicitly control when a value is converted. 
+This can be advantageous when a value is used repeatedly because the conversion can be performed once before a computationally intensive 
+operation and the result converted back only when necessary.
+
+Endian arithmetic types provide greater convenience but may perform implicit conversions during arithmetic operations. 
+Boost.Endian's documentation demonstrates that, particularly in repeated computations, 
+explicitly controlling the location of conversions can avoid unnecessary byte swapping.
+
+This distinction is relevant for automotive applications because software may simultaneously have strict requirements for 
+portability and computational efficiency. Communication-oriented code may prioritize explicit representation and correctness, 
+while performance-critical processing may require minimizing repeated conversions.
+
+\subsection{Challenges of reimplementation in Rust}
+
+Reimplementing Boost.Endian in Rust presents several challenges, although Rust provides several primitives that are well suited to the problem.
+
+The first challenge is representing values with an explicitly defined byte order while maintaining Rust's type 
+and memory-safety guarantees. 
+Rust's standard library provides methods such as \texttt{from\_be}, \texttt{from\_le}, \texttt{to\_be}, and \texttt{to\_le}, 
+as well as byte-oriented conversion facilities. These provide a strong foundation for implementing endian-aware abstractions, 
+but they do not directly reproduce the complete Boost.Endian API.
+
+A second challenge is the implementation of endian-aware buffer types. 
+Such types need to preserve a specific byte representation independently of the host architecture. 
+A Rust implementation can use byte arrays as the underlying representation, which has the advantage of 
+making the representation explicit and avoiding direct dependence on native integer layout.
+
+Unaligned representations introduce another challenge. Rust provides strong guarantees around references and alignment, 
+meaning that interpreting an arbitrary byte sequence directly as an integer reference may require unsafe operations. 
+A safe implementation should therefore prefer byte-based representations and explicit conversion operations where possible, 
+isolating any required unsafe code behind a well-defined abstraction.
+
+A further challenge is reproducing Boost.Endian's arithmetic types. Boost.Endian allows endian-aware values to 
+participate directly in arithmetic expressions, while Rust's operator traits provide a different abstraction mechanism. 
+Implementing equivalent behavior requires implementing traits such as \texttt{Add}, \texttt{Sub}, \texttt{Mul}, 
+and their assignment variants where appropriate.
+
+However, a direct translation of the C++ API would not necessarily produce an idiomatic Rust library. 
+Rust's ownership model, trait system, explicit conversion mechanisms, and emphasis on compile-time safety provide opportunities 
+to design a safer interface rather than reproducing the C++ interface exactly.
+
+Another important consideration is floating-point support. Endianness of floating-point representations cannot always be treated as 
+a simple integer byte swap because floating-point representation and byte ordering involve additional assumptions. 
+Boost.Endian therefore places restrictions on some floating-point conversion operations. A Rust reimplementation must 
+preserve these semantic limitations rather than assuming that arbitrary floating-point values can safely be transformed by reversing their bytes.
+
+\subsection{Rationale for selection}
+
+Boost.Endian was selected because it represents a particularly relevant example of low-level, 
+cross-platform functionality that is commonly required when implementing systems software.
+
+Unlike functionality that is primarily concerned with convenience abstractions, 
+endian handling directly affects the representation of data exchanged between software components. 
+This makes the library particularly relevant to automotive architectures, where multiple software 
+and hardware components must exchange binary data according to well-defined protocols.
+
+The library also provides an interesting migration target because it contains several distinct implementation strategies: 
+conversion functions, buffer types, and arithmetic types. These approaches expose different trade-offs between explicitness, 
+ease of use, memory representation, and performance. 
+Reimplementing them in Rust provides an opportunity to evaluate how these design choices can be expressed using Rust's type system 
+and trait-based abstractions.
+
+The support for both aligned and unaligned representations is another reason for its selection. 
+It introduces a direct connection to low-level memory representation and requires careful consideration of alignment, 
+raw byte access, and safe abstractions. This complements the selection of \texttt{Boost.Align}, which focuses explicitly on memory alignment.
+
+The combination of \texttt{Boost.Align} and \texttt{Boost.Endian} is therefore particularly useful for the migration study. 
+While Boost.Align focuses on the physical placement and alignment of objects in memory, 
+Boost.Endian focuses on the representation and interpretation of multi-byte values. 
+Together, they cover two closely related aspects of low-level systems programming: how data is positioned in memory and 
+how that data is represented across system boundaries.
+
+Furthermore, Boost.Endian is sufficiently mature and well-defined to provide a meaningful basis for 
+comparing the original C++ implementation with a Rust implementation. The library's documented performance considerations, 
+multiple API approaches, and portability requirements provide several dimensions against which the Rust implementation can be evaluated.
+
+The primary references used for the analysis are:
+
+\begin{itemize}
+\item \url{https://www.boost.org/library/latest/endian/}
+\item \url{https://www.boost.org/doc/libs/latest/libs/endian/doc/html/endian.html}
+\item \url{https://github.com/eclipse-score}
+\end{itemize}

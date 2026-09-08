@@ -54,3 +54,24 @@ pub unsafe extern "C" fn double_f32_avx_raw(ptr: *mut f32, len: usize) {
     #[cfg(target_arch = "x86_64")]
     crate::simd::double_f32_avx(ptr, len);
 }
+
+// ##################################
+// FFI overhead measurement functions
+// ##################################
+
+#[no_mangle]
+pub extern "C" fn ffi_overhead_noop() {
+    // This function does nothing and serves as a baseline for measuring FFI overhead.
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ffi_overhead_single_operation(ptr: *mut f32) {
+    assert!(!ptr.is_null());
+    *ptr *= 2.0;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ffi_overhead_kernel(ptr: *mut f32, len: usize) {
+    #[cfg(target_arch = "x86_64")]
+    crate::simd::double_f32_avx(ptr, len);
+}

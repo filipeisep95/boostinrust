@@ -1,0 +1,12 @@
+[package]
+name = "boost-align"
+version = "0.0.0"
+edition = "2021"    # ← add this line here
+
+[build-dependencies]
+cc = "1.0"   # instead of cxx-build
+
+[lib]
+name = "align"
+path = "src/align.rs"
+crate-type = ["staticlib"]

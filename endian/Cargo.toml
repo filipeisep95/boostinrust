@@ -1,0 +1,15 @@
+[package]
+name = "boost-endian"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+cxx = "1.0"
+
+[build-dependencies]
+cxx-build = "1.0"
+
+[lib]
+name = "endian"
+path = "src/lib.rs"
+crate-type = ["staticlib"]

@@ -1,9 +1,0 @@
-\babel@toc {english}{}\relax 
-\addvspace {10\p@ }
-\addvspace {10\p@ }
-\contentsline {table}{\numberline {2.1}{\ignorespaces Rust ecosystem crates that replace common Boost C++ Libraries.}}{19}{table.caption.46}%
-\contentsline {table}{\numberline {2.2}{\ignorespaces Top 20 Most Common Vulnerabilities and Rust Prevention Status \blx@tocontentsinit {0}\parencite {meneely2025just}}}{22}{table.caption.52}%
-\addvspace {10\p@ }
-\contentsline {table}{\numberline {3.1}{\ignorespaces Boost libraries relevant to Eclipse SCORE–style automotive systems and Rust equivalents}}{26}{table.caption.59}%
-\addvspace {10\p@ }
-\contentsline {table}{\numberline {4.1}{\ignorespaces Gantt-style development plan for the Boost-to-Rust migration}}{32}{table.caption.87}%

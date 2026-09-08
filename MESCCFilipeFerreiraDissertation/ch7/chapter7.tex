@@ -1,0 +1,1982 @@
+\chapter{Implementation of the Migration Strategy}
+\label{chap:Chapter7}
+
+\section{ImplementationOverview}
+
+This chapter presents the implementation of the Boost to Rust migration described in the previous chapters.
+The implementation focuses on two selected Boost libraries, namely \texttt{Boost.Align} and \texttt{Boost.Endian},
+which were selected due to their low level nature, 
+relevance to systems programming and suitable for evaluating the migration methodology. 
+
+The implementation translates the relevant functionality of the original C++ libraries into Rust, 
+while avoiding a direct syntactic translation of the original source code.
+Instead, the Rust implementation uses Rust's ownership model, type system and stadard library facilities where these
+provide suitable abstractions for the original C++ functionality.
+
+The implementation is evaluated with respect to foir main objectives: functional equivalence, memory safety,
+interoperability with existing C++ software and suitability for automotive systems software.
+
+The implementation follows the migration strategy described in Chapter \ref{chap:Chapter5}.
+For each library, the original functionality is first mapped to Rust abstractions, follower by the implementation 
+of the selected functionality and its associated tests. Where interoperability is required, 
+an appropriate interoperability interface is introduced around the Rust implementation. The specific
+FFI mechanism is selected according to the compatibility requirements of each library.
+
+\section{Implementation Environment}
+
+The implementation was developed in the \texttt{boostinrust} repository, which provides the experimental environment 
+for evaluating the migration of selected Boost libraries to Rust. The implementation focuses on \texttt{Boost.Align} 
+and \texttt{Boost.Endian}, selected as representative examples of low level systems functionality involving 
+memory alignment and binary data representation. 
+
+The Rust implementation was developed using Rust version 1.93. The development environment includes the Rust compiler
+(\texttt{rustc}), Cargo and the LLVM/Clang based tooling provided with the Rust toolchain. In particular, 
+the environment contains the Rust compiler and the associated \texttt{rust-clang}, \texttt{rust-lld}, 
+\texttt{rust-llvm-dwp}, and \texttt{rustdoc} components. The use of the LLVM/Clang toolchain is relevant to the low-level 
+nature of the selected libraries and provides the compiler infrastructure required for building and 
+inspecting the resulting Rust implementation.
+
+The original Boost implementations are used as the reference implementations for the migration. This allows the Rust 
+implementation to be evaluated against the functionality and observable behavior of the original C++ corresponding libraries.
+The approach follows the migration strategy described in Chapter \ref{chap:Chapter5}, in which the functionality and dependencies
+of the original library are first analyzed before equivalent Rust abstractions are defined and implemented. 
+The resulting Rust implementation is then tested and evaluated against the original C++ library to ensure functional equivalence,
+memory safety, interoperability and suitability for automotive systems software.
+
+The implementation does not attempt to reproduce the interal structure of the C++ implementation directly. Instead, Rust specific
+mechanisms are used where they provide a more appropriate representation of the original functionality. This includes Rust's ownership
+and borrowing model, type system and standard library facilities for memory layout and byte order operations.
+This distinction is particularly relevant for the selected libraries. Boost.Align requires operations involving memory alignment, 
+allocation and pointer manipulation, while Boost.Endian requires explicit control over the byte representation and byte order of stored values.
+
+The implementation is structured to support functional verification through tests. 
+The behavior of the Rust implementation is evaluated against the expected behavior of the corresponding Boost functionality, 
+with particular attention given to boundary conditions and low-level memory operations.
+This follows the development plan established in Chapter~4, where functional equivalence is verified through 
+unit testing and interface-level validation.
+
+A specific concern of the implementation environment is the use of \texttt{unsafe} Rust. 
+Although Rust provides alignment and memory-safety guarantees through its type system, 
+reproducing some low-level Boost functionality requires operations involving raw pointers or manually allocated memory. 
+uch operations are therefore isolated and minimized in the implementation. This follows the migration strategy's requirement to
+preserve Rust's safety guarantees while restricting unsafe operations to well-defined boundaries.
+
+Table~\ref{tab:implementation_environment} summarizes the main tools and
+versions used during the implementation.
+
+
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{|l|l|}
+        \hline
+        \textbf{Component} & \textbf{Version / Configuration} \\ \hline
+        Rust & 1.93 \\ \hline
+        Rust compiler & \texttt{rustc 1.93} \\ \hline
+        Documentation & \texttt{rustdoc 1.93} \\ \hline
+        Compiler infrastructure & LLVM / Clang \\ \hline
+        Linker & \texttt{rust-lld} \\ \hline
+        Reference implementation & Boost 1.91.0 \\ \hline
+    \end{tabular}
+    \caption{Implementation environment}
+    \label{tab:implementation_environment}
+\end{table}
+
+The resulting environment provides a controlled basis for implementing and evaluating the selected libraries. 
+It combines the original Boost implementations used as behavioral references with a contemporary Rust
+toolchain, allowing the migration to be evaluated while preserving the low-level characteristics relevant to systems programming.
+
+
+\section{Boost.Align Reimplementation}
+
+The reimplementation of Boost.Align focuses on the memory-alignment functionality required by the selected use case.
+Rather than reproducing the complete Boost.Align API, the implementation provides a Rust-native abstraction for creating 
+and manipulating 32-byte-aligned data and exposes the relevant functionality through a C-compatible interface.
+
+The implementation is located in the align component of the project. 
+Its central abstraction is AlignedBuffer, which stores floating-point data in an alignment-aware representation suitable for SIMD processing. 
+The implementation additionally provides an \lstinline|aligned_type!| macro for defining aligned Rust types 
+and an AVX-specific processing function for operating on aligned buffers.
+
+This approach follows the migration strategy described in Chapter 5: the objective is not to reproduce the original C++ implementation internally, 
+but to preserve the relevant observable behaviour while using Rust's type system, ownership model and memory-management mechanisms. 
+In particular, the implementation uses Rust's \lstinline|#[repr(align(...))]| attribute and Vec allocation rather than 
+implementing a separate low-level aligned allocator.
+
+\subsection{Scope and API mapping}
+
+The Boost.Align library provides several facilities related to memory alignment, including aligned allocation and deallocation, 
+pointer alignment, alignment inspection and aligned allocators. For the implementation developed in this project, 
+only a subset of this functionality was required.
+
+The Rust implementation therefore maps the relevant alignment requirements to Rust language 
+and standard-library mechanisms rather than attempting to reproduce the complete Boost.Align API.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|l|p{7cm}|}
+\hline
+\textbf{Boost.Align concept} & \textbf{Rust implementation} & \textbf{Purpose} \\ \hline
+
+Aligned storage
+& \lstinline|#[repr(align(32))]|
+& Establishes a compile-time alignment requirement \\ \hline
+
+Aligned type
+& \lstinline|Aligned<T>|
+& Provides a generic 32-byte-aligned wrapper \\ \hline
+
+User-defined aligned type
+& \lstinline|aligned_type!|
+& Generates types with a configurable alignment \\ \hline
+
+Aligned memory buffer
+& \lstinline|AlignedBuffer|
+& Stores aligned \texttt{f32} data \\ \hline
+
+Aligned allocation
+& \lstinline|Vec<F32x8>|
+& Uses Rust's allocator with the alignment of \lstinline|F32x8| \\ \hline
+
+Pointer access
+& \lstinline|as_ptr()| / \lstinline|as_mut_ptr()|
+& Provides raw-pointer access for SIMD and FFI \\ \hline
+
+Alignment-dependent processing
+& \lstinline|double_f32_avx()|
+& Performs AVX operations on aligned memory \\ \hline
+
+C++ interoperability
+& \lstinline|ffi| module
+& Exposes the buffer and SIMD operations through C ABI functions \\ \hline
+
+\end{tabular}
+\caption{Mapping of Boost.Align concepts to the Rust implementation}
+\label{tab:boost-align-rust-mapping}
+\end{table}
+
+
+This represents a deliberate reduction of the original API surface. 
+In particular, the current implementation does not provide direct Rust equivalents of all Boost.Align functions such as 
+align\_up, align\_down, is\_aligned, aligned\_alloc, aligned\_free, or aligned\_allocator. 
+Instead, alignment is established structurally through the type definition of the stored elements.
+
+This distinction is important because the objective of the implementation is to investigate whether the relevant alignment guarantees 
+can be expressed more directly using Rust's type system rather than reproducing Boost's low-level allocation interface.
+
+\newpage
+\subsection{FFI Design and C ABI Selection}
+
+The Boost.Align reimplementation uses a C-compatible ABI to expose the Rust implementation to existing C++ software. 
+The selection of this approach is primarily driven by the C++ compatibility requirements of the original Boost.Align 
+library. Boost.Align supports C++03, which is therefore considered the baseline C++ standard for 
+the interoperability requirements of this migration.
+
+Rust--C++ interoperability frameworks such as \texttt{cxx} were therefore not selected for the Boost.Align 
+interoperability layer. In particular, the CXX build integration requires a C++11 compilation environment, 
+which is incompatible with the C++03 baseline that must be preserved for the Boost.Align use case. 
+Using CXX would consequently introduce a newer C++ standard requirement and prevent the resulting Rust replacement 
+from being integrated into C++03-based code while maintaining the compatibility target of the original library.
+
+A C ABI provides a suitable alternative because the interface can be consumed from C++03 without requiring modern 
+C++ language constructs at the interoperability boundary. The Boost.Align FFI exposes a deliberately small set of 
+C-compatible functions operating on primitive values, sizes, buffers, and opaque pointers. 
+No C++ classes, templates, exceptions, or standard-library types are required by the interface.
+
+The C ABI also separates the C++ compatibility requirements from the internal Rust implementation. 
+The Rust implementation can use modern Rust features, including its ownership model, type system and standard-library 
+abstractions, while the externally visible interface remains compatible with the C++03 environment. 
+This allows the migrated implementation to preserve the integration requirements of the original Boost.Align library 
+without constraining the internal Rust implementation to the capabilities of C++03.
+
+The decision can therefore be summarized as follows:
+
+\begin{itemize}
+\item \textbf{C++03 compatibility is a requirement} because it represents the baseline C++ standard supported by 
+the Boost.Align use case.
+\item \textbf{\texttt{cxx} and similar Rust--C++ FFI approaches were not selected} because their C++ requirements are 
+incompatible with this C++03 baseline.
+\item \textbf{The C ABI was selected} because it provides the required interoperability boundary without introducing 
+a dependency on a newer C++ standard.
+\item \textbf{Rust-specific implementation details remain internal}, allowing the Rust implementation to use idiomatic 
+Rust abstractions while exposing only a C-compatible interface to the C++ application.
+\end{itemize}
+
+This decision is specific to the Boost.Align migration. The Boost.Endian reimplementation uses \texttt{cxx} because its 
+interoperability requirements and compatibility constraints differ. Consequently, the two libraries demonstrate 
+different approaches to Rust--C++ interoperability while allowing the migration methodology to be evaluated under 
+different integration requirements.
+
+The resulting Boost.Align architecture is:
+
+\begin{verbatim}
+C++03 application
+|
+| C-compatible ABI
+v
+Boost.Align FFI layer
+|
+v
+Rust AlignedBuffer
+|
+v
+Rust allocation and SIMD implementation
+\end{verbatim}
+
+The C ABI therefore acts as the compatibility boundary that allows the Rust implementation to replace the Boost.Align 
+functionality while retaining compatibility with the C++03 environment targeted by the original library.
+
+
+\newpage
+\subsection{Alignment representation}
+
+The central design decision in the Rust implementation is to represent alignment as a type-level property.
+
+The implementation defines:
+
+\begin{lstlisting}[
+    style=rustblock,
+    aboveskip=0.5\baselineskip,
+    belowskip=0.5\baselineskip
+]
+#[repr(align(32))]
+pub struct Aligned<T>(pub T);
+\end{lstlisting}
+
+The implementation defines:
+
+\begin{lstlisting}[style=rustblock]
+#[repr(align(32))]
+pub struct Aligned<T>(pub T);
+\end{lstlisting}
+
+The \lstinline|#[repr(align(32))]| attribute requires instances of \lstinline|Aligned<T>| to have an alignment of at 
+least 32 bytes. The wrapper implements \lstinline|Deref| and \lstinline|DerefMut|, 
+allowing access to the contained value without requiring callers to manipulate the wrapper explicitly.
+
+A second mechanism is provided through the
+\lstinline|aligned_type!| macro, which can be invoked as
+\lstinline|aligned_type!(AlignedF32x32, f32, 32)|. 
+
+The macro generates a structure equivalent to:
+
+\begin{lstlisting}[style=rustblock]
+#[repr(align($align))]
+pub struct $name(pub $inner_type);
+\end{lstlisting}
+
+This provides a convenient mechanism for defining aligned types while keeping the alignment requirement 
+explicit at the type definition.
+
+The implementation moves an important part of th alignment responsibility from runtime allocation logic to 
+the Rust type system.
+Instead of allocating and arbitrary block of memory and subsequently determine the returned pointer satisfies an 
+alignment requirement, the type of the element carries the required alignment.
+
+The buffer implementation applies the same principle through the internal \lstinline|F32x8| type:
+
+\begin{lstlisting}[style=rustblock]
+#[repr(align(32))]
+struct F32x8([f32; 8]);
+\end{lstlisting}
+
+The \lstinline|F32x8| type represents eight \lstinline|f32| values, corresponding to a 256-bit AVX register. 
+The \lstinline|#[repr(align(32))]| attribute requires instances of \lstinline|F32x8| to have an alignment of at 
+least 32 bytes.
+Consequently, a \lstinline|Vec<F32x8>| allocation is required to satisfy this alignment requirement.
+
+The \lstinline|F32x8| type represents eight \lstinline|f32| values, corresponding to a 256-bit AVX register. 
+Since the type has an alignment requirement of 32 bytes, a \lstinline|Vec<F32x8>| allocation is required
+to satisfy this alignment.
+
+Consequently, the alignment requirement is established by the type of the allocation rather than by manually 
+adjusting an address returned from a general-purpose allocation.
+
+The logical length of the buffer is maintained separately:
+
+\begin{lstlisting}[style=rustblock]
+pub struct AlignedBuffer {
+data: Vec<F32x8>,
+len: usize,
+}
+\end{lstlisting}
+
+Here, \lstinline|data| contains the physically allocated and aligned storage, 
+while \lstinline|len| records the number of logical \lstinline|f32| elements stored in the buffer.
+
+The constructor explicitly restricts the buffer size to multiples of eight:
+
+\begin{lstlisting}[style=rustblock]
+assert!(size % 8 == 0,
+"AlignedBuffer size must be a multiple of 8");
+\end{lstlisting}
+
+This restriction ensures that the logical buffer consists exclusively of complete \lstinline|F32x8| blocks. 
+It also establishes the condition required by the AVX implementation, 
+which processes eight \lstinline|f32| values per iteration.
+
+The implementation enforces two constraints:
+
+\begin{enumerate}
+\item the underlying storage has an alignment of 32 bytes; and
+\item the number of logical \lstinline|f32| elements is a multiple of eight.
+\end{enumerate}
+
+Together, these properties ensure that the buffer can be safely used with aligned AVX load and store operations, 
+with each operation processing a complete group of eight \lstinline|f32| values.
+
+This approach establishes the alignment requirement through the type of the allocation itself, 
+rather than by manually adjusting an address returned by a general-purpose allocation. 
+The alignment constraint is therefore expressed as part of the type definition, 
+allowing the Rust allocator and collection types to preserve the required alignment
+without requiring explicit pointer manipulation by the caller.
+
+
+\newpage
+\subsection{Aligned Memory Allocation}
+
+Differenf from original Boost.Align interface, the Rust implementation does not explicitly expose a 
+general purpose \lstinline|aligned_alloc|/ \lstinline|aligned_free| pair. 
+Instead, aligned storage is obtained indirectly through the Rust \lstinline|Vec| abstraction.
+
+The relevant type definition is:
+
+\begin{lstlisting}[style=rustblock]
+#[repr(align(32))]
+struct F32x8([f32; 8]);
+\end{lstlisting}
+
+The aligned elements are then stored in the \lstinline|AlignedBuffer|
+structure:
+
+\begin{lstlisting}[style=rustblock]
+pub struct AlignedBuffer {
+data: Vec<F32x8>,
+len: usize,
+}
+\end{lstlisting}
+
+The constructor creates the vector as follows:
+
+\begin{lstlisting}[style=rustblock]
+data: (0..chunks)
+.map(|_| F32x8([value; 8]))
+.collect(),
+\end{lstlisting}
+
+The important property of this approach is that the allocator operates on \lstinline|F32x8| elements rather than 
+directly on \lstinline|f32| elements. The alignment requirement of the allocated storage is therefore derived from 
+the alignment requirement of \lstinline|F32x8|. This allows the alignment constraint to be expressed
+through the type rather than being supplied explicitly as an argument to the allocation operation.
+
+This represents a significant difference from the Boost.Align implementation. 
+Boost.Align exposes allocation as an explicit operation in which the caller specifies both the requested size 
+and alignment. The Rust implementation, in contrast, encodes the alignment requirement
+into the type being allocated and relies on the standard \lstinline|Vec| abstraction to manage the resulting storage.
+
+The ownership model is also substantially different. The \lstinline|AlignedBuffer| owns its \lstinline|Vec<F32x8>|, 
+and the allocated storage is automatically released when the \lstinline|AlignedBuffer| is dropped. 
+Consequently, normal Rust usage does not require an explicit deallocation function or require the caller
+to pair an allocation with a corresponding \lstinline|aligned_free| operation.
+
+This ownership-based approach eliminates an important class of manual memory-management operations present in the 
+C++ interface. Resource lifetime is instead tied to the lifetime of the owning Rust value, with deallocation performed 
+automatically according to Rust's ownership and drop semantics.
+
+An explicit destruction function is retained only for the C compatible interface, where manual lifetime management is 
+required to interoperate with external code. This distinction allows the native Rust API to remain idiomatic while 
+still providing the necessary lifecycle operations for the interoperability layer described later.
+
+\newpage
+\subsection{Pointer Alignment}
+
+Although the storage is represented using an aligned type, the implementation provides raw-pointer access through the 
+following methods:
+
+\begin{lstlisting}[style=rustblock]
+pub fn as_ptr(&self) -> *const f32 {
+self.data.as_ptr() as *const f32
+}
+
+pub fn as_mut_ptr(&mut self) -> *mut f32 {
+self.data.as_mut_ptr() as *mut f32
+}
+\end{lstlisting}
+
+This functionality is required because the SIMD implementation operates directly on raw pointers. 
+The AVX operation is defined as follows:
+
+\begin{lstlisting}[style=rustblock]
+#[target_feature(enable = "avx")]
+pub unsafe fn double_f32_avx(ptr: *mut f32, len: usize)
+\end{lstlisting}
+
+The implementation processes eight elements per iteration:
+
+\begin{lstlisting}[style=rustblock]
+for i in (0..len).step_by(8) {
+let v = _mm256_load_ps(ptr.add(i));
+let result = _mm256_add_ps(v, v);
+_mm256_store_ps(ptr.add(i), result);
+}
+\end{lstlisting}
+
+The \lstinline|_mm256_load_ps| and \lstinline|_mm256_store_ps|
+operations require appropriately aligned memory. Consequently, the caller of \lstinline|double_f32_avx| must satisfy 
+three requirements:
+
+\begin{itemize}
+\item the pointer must be aligned to 32 bytes;
+\item the length must be a multiple of eight; and
+\item the complete memory range must be valid and exclusively accessible
+for the duration of the operation.
+\end{itemize}
+
+The alignment guarantee originates from the \lstinline|F32x8| type, while the multiple-of-eight constraint is
+established by the construction of \lstinline|AlignedBuffer|.
+
+The SIMD function nevertheless retains an \lstinline|unsafe| boundary because Rust cannot statically verify all 
+safety conditions associated with an arbitrary raw pointer supplied by the caller. In particular,
+pointer validity, the size of the accessible memory region, exclusive access for mutable operations 
+and the processor feature required by the function cannot all be inferred from the raw-pointer interface.
+
+For the buffer-based FFI function, the implementation additionally performs a runtime alignment check before passing 
+the pointer to the AVX implementation:
+
+\begin{lstlisting}[style=rustblock]
+assert_eq!(
+slice.as_ptr() as usize % 32,
+0,
+"buffer pointer is not 32-byte aligned: {:p}",
+slice.as_ptr()
+);
+\end{lstlisting}
+
+This assertion provides a runtime sanity check at the FFI boundary, where data may originate from code outside the 
+guarantees of the native Rust API.
+
+The resulting design combines static guarantees provided by the Rust type system with runtime validation at the unsafe 
+and FFI boundaries. The aligned storage type establishes the required memory alignment, while the buffer abstraction 
+constrains its logical length. Runtime checks are then used to validate assumptions that cannot be expressed
+or verified statically when crossing the raw-pointer and FFI interfaces.
+
+
+\subsection{Allocator Support}
+
+The original Boost.Align implementation provides dedicated aligned allocator abstractions, 
+including \lstinline|aligned_allocator| and \lstinline|aligned_allocator_adaptor|. 
+The Rust implementation does not reproduce these classes directly. 
+Instead, allocation is delegated to Rust's standard \lstinline|Vec| abstraction.
+
+The relevant allocation is a \lstinline|Vec<F32x8>|, where \lstinline|F32x8| has a 32-byte alignment requirement:
+
+\begin{lstlisting}[style=rustblock]
+Vec<F32x8>
+\end{lstlisting}
+
+This means that the alignment requirement of the allocated storage is derived from the alignment of the type being 
+stored rather than being provided as a separate parameter to the allocation operation.
+
+This design provides two advantages for the selected use case. First, it avoids introducing a separate custom allocator 
+abstraction merely to reproduce the C++ allocator interface. Second, ownership remains explicit: 
+\lstinline|AlignedBuffer| owns the vector and therefore owns the memory represented by it.
+
+The lifetime of the allocation is consequently tied to the lifetime of the \lstinline|AlignedBuffer| object. 
+When the object is dropped, its \lstinline|Vec<F32x8>| is also dropped and its allocation is released
+automatically by Rust's memory-management mechanisms.
+
+The implementation therefore replaces the explicit C++ allocation and deallocation relationship with Rust's ownership 
+model:
+
+\begin{verbatim}
+Boost.Align:
+aligned_alloc()
+|
+raw pointer
+|
+aligned_free()
+
+Rust:
+AlignedBuffer
+|
+Vec<F32x8>
+|
+automatic Drop
+\end{verbatim}
+
+This is not a one-to-one API translation. Instead, it represents a semantic mapping from explicit manual allocation to 
+an ownership-based allocation model. For the selected AVX use case, this provides the required alignment guarantee 
+without exposing the allocation mechanism directly to the caller.
+
+\subsection{Unsafe Code Isolation}
+
+One of the implementation objectives was to restrict unsafe operations to the smallest practical part of the 
+implementation. Most of \lstinline|AlignedBuffer| is implemented using safe Rust, with construction, ownership, 
+length management, and destruction handled through standard Rust abstractions.
+
+Unsafe operations are concentrated in three areas.
+
+The first is the conversion from the internally stored
+\lstinline|F32x8| representation to an \lstinline|f32| slice:
+
+\begin{lstlisting}[style=rustblock]
+pub fn as_slice(&self) -> &[f32] {
+unsafe {
+std::slice::from_raw_parts(self.as_ptr(), self.len)
+}
+}
+\end{lstlisting}
+
+and its mutable counterpart:
+
+\begin{lstlisting}[style=rustblock]
+pub fn as_mut_slice(&mut self) -> &mut [f32] {
+unsafe {
+std::slice::from_raw_parts_mut(self.as_mut_ptr(), self.len)
+}
+}
+\end{lstlisting}
+
+These operations require the implementation to guarantee that the pointer refers to a valid contiguous range containing 
+at least \lstinline|len| initialized \lstinline|f32| values. The safety of these operations therefore depends on 
+invariants established by \lstinline|AlignedBuffer|.
+
+The second unsafe boundary is the AVX implementation. Raw-pointer arithmetic and architecture-specific SIMD intrinsics 
+require explicit unsafe operations:
+
+\begin{lstlisting}[style=rustblock]
+let v = _mm256_load_ps(ptr.add(i));
+\end{lstlisting}
+
+The AVX function therefore explicitly documents the safety preconditions required by the caller, 
+including pointer alignment, validity of the accessed memory range, and the appropriate length.
+
+The third unsafe boundary is the C-compatible interface. For example, the destruction function is defined as:
+
+\begin{lstlisting}[style=rustblock]
+pub unsafe extern "C" fn aligned_buffer_destroy(
+buffer: *mut AlignedBuffer
+)
+\end{lstlisting}
+
+The Rust-owned object is reconstructed using:
+
+\begin{lstlisting}[style=rustblock]
+drop(Box::from_raw(buffer));
+\end{lstlisting}
+
+This operation is valid only when the pointer originated from \lstinline|Box::into_raw| and has not already been destroyed.
+
+The corresponding FFI construction function establishes this ownership relationship:
+
+\begin{lstlisting}[style=rustblock]
+let buffer = Box::new(AlignedBuffer::new(size, value));
+Box::into_raw(buffer)
+\end{lstlisting}
+
+The resulting FFI lifecycle can therefore be represented as:
+
+\begin{verbatim}
+aligned_buffer_create()
+|
+Box<AlignedBuffer>
+|
+Box::into_raw()
+|
+C/C++ owns opaque pointer
+|
+aligned_buffer_destroy()
+|
+Box::from_raw()
+|
+Drop
+\end{verbatim}
+
+This provides an appropriate boundary for isolating unsafe operations, as C++ cannot express the ownership guarantees 
+provided by Rust's type system. The FFI layer consequently acts as the bridge between the
+externally managed C/C++ representation and the Rust-owned object.
+
+One issue that should nevertheless be acknowledged is the use of \lstinline|assert!| in some FFI functions. 
+For example, \lstinline|aligned_buffer_len| asserts that its pointer argument is non-null. 
+While such assertions are useful for detecting violations during development, they are not an ideal error-handling 
+mechanism for a production C ABI. In production-oriented automotive integration, these assertions would preferably be 
+replaced with explicit error or status handling so that failure does not depend on Rust panic behaviour
+at an FFI boundary.
+
+This distinction illustrates the difference between the research prototype and a production-ready interoperability layer.
+The prototype uses assertions to detect violated assumptions, while a production interface would require a defined 
+error-handling contract suitable for the target C/C++ environment.
+
+\subsection{Boost.Align Test Suite}
+
+Validation of the Boost.Align reimplementation was performed at both the Rust implementation level and through a 
+C++ benchmark comparing the Boost and Rust implementations.
+
+The Rust test suite contains tests covering the fundamental properties required by the selected implementation.
+
+The first test verifies the alignment guarantee:
+
+\begin{lstlisting}[style=rustblock]
+#[test]
+fn test_alignment() {
+let buffer = AlignedBuffer::new(
+16,
+AlignedF32x32(1.0)
+);
+
+```
+let buffer_pointer = buffer.as_ptr() as usize;
+
+assert_eq!(buffer_pointer % 32, 0);
+```
+
+}
+\end{lstlisting}
+
+The test explicitly verifies that the address returned by the buffer is divisible by 32, thereby validating the 
+fundamental alignment requirement of the selected Boost.Align use case.
+
+The second test validates the AVX processing path:
+
+\begin{lstlisting}[style=rustblock]
+#[test]
+fn test_simd() {
+let mut buffer =
+AlignedBuffer::new(16, AlignedF32x32(1.0));
+
+```
+unsafe {
+    let buffer_pointer =
+        buffer.as_mut_ptr() as *mut f32;
+
+    aligned_buffer::simd::double_f32_avx(
+        buffer_pointer,
+        buffer.len()
+    );
+}
+
+for v in buffer.as_slice() {
+    assert_eq!(*v, 2.0);
+}
+```
+
+}
+\end{lstlisting}
+
+This test simultaneously exercises aligned allocation, raw-pointer conversion, and SIMD processing. 
+The initial value is \lstinline|1.0|, and the AVX operation doubles every element, resulting in an expected
+value of \lstinline|2.0| for each element.
+
+In addition to the Rust tests, the project contains a C++ benchmark driver comparing the Boost.Align and Rust 
+implementations using the same general workload. The benchmark allocates a buffer containing
+\lstinline|2^{24}| \lstinline|float| values, corresponding to approximately 64~MiB of data, and performs 50 processing 
+iterations using 32-byte aligned storage.
+
+The Boost implementation uses:
+
+\begin{lstlisting}[style=cppblock]
+boost::alignment::aligned_alloc(ALIGN,
+N * sizeof(float));
+\end{lstlisting}
+
+whereas the Rust implementation uses the \lstinline|AlignedBuffer|
+abstraction.
+
+Both implementations verify the 32-byte alignment of their allocated buffers and process the data using AVX operations. 
+The benchmark additionally measures execution time, throughput, resident memory usage, and memory behaviour during 
+deallocation.
+
+The recorded benchmark results show successful correctness and alignment checks for both implementations. 
+The reported average iteration time was approximately 21.68~ms for Boost.Align and 20.70~ms for the Rust implementation, 
+corresponding to reported throughputs of approximately 6.19~GB/s and 6.48~GB/s, respectively.
+The resulting Boost-to-Rust execution-time ratio was approximately 1.047, with the Rust implementation achieving 
+the higher measured throughput in this experiment.
+
+The memory measurements showed different behaviour. The reported RSS increase during allocation was approximately 
+196~KB for the Boost implementation and 65,540~KB for the Rust implementation, while both implementations subsequently 
+showed approximately 65,540~KB of RSS reduction during deallocation.
+
+These results should not be interpreted as a general performance advantage of Rust over Boost.Align. 
+The benchmark evaluates a specific 64~MiB workload, allocator configuration, AVX processing path, and
+experimental environment. Furthermore, the two SIMD kernels are not implemented identically at the instruction level: 
+the C++ benchmark uses \lstinline|_mm256_mul_ps| with a vector containing \lstinline|2.0f|, 
+whereas the Rust implementation uses \lstinline|_mm256_add_ps(v, v)|. Although both operations produce the
+same mathematical result for the tested input, they represent different instructions and may have different performance
+characteristics.
+
+Consequently, the benchmark primarily demonstrates that the Rust implementation can provide the required alignment and 
+SIMD functionality with comparable performance under the tested workload.
+The results do not establish a general performance superiority of either implementation.
+
+Overall, the tests demonstrate the principal objectives of the Boost.Align reimplementation. 
+Aligned storage can be expressed through Rust's type system, the resulting buffer can participate in an
+ownership-based memory model, and the aligned memory can be exposed to low-level SIMD operations and C++ through a 
+narrowly defined unsafe/FFI boundary. This provides the required functionality for the
+selected use case while avoiding a direct reproduction of the original Boost allocation API.
+
+
+\section{Boost.Endian Reimplementation}
+
+The Boost.Endian reimplementation follows the three complementary approaches provided by the original library:
+endian conversion functions, endian buffer types, and endian arithmetic types. 
+This structure was selected because the three approaches represent different trade-offs between explicit 
+control over byte-order conversion, convenience, and arithmetic support. 
+Boost.Endian defines these approaches as separate abstractions rather than simply providing a single endian-aware 
+integer type.
+
+The Rust implementation preserves this distinction. The \texttt{endian} crate is divided into three principal modules:
+
+\begin{lstlisting}[style=rustblock]
+conversion.rs
+buffer.rs
+arithmetic.rs
+\end{lstlisting}
+
+A fourth module, \texttt{ffi.rs}, provides interoperability with C++ through the \texttt{cxx} crate.
+
+The implementation follows the same concptual organization as Boost.End, adapting the interfaces to Rust's type system
+and standard library facilities.
+
+The three Rust approaches are:
+
+\begin{enumerate}
+\item \textbf{Conversion functions}, where ordinary Rust integer and floating-point values are explicitly 
+converted between byte orders.
+```
+\item \textbf{Buffer types}, where the desired byte order is associated with a type and conversion to and 
+from the native representation is explicit.
+\item \textbf{Arithmetic types}, where the value is stored in a specified byte order while arithmetic and 
+bitwise operations are provided directly on the endian-aware type.
+```
+\end{enumerate}
+
+The organization is the same as the design described in the Boost.Endian documentation. Conversion functions provide 
+explicit conversion operations, buffer types provide explicitly converted storage and arithmetic types provide 
+implicit conversion together with arithmetic operations.
+
+The Rust implementation additionally exposes the functionality to C++ through a cxx bridge. This allows the existing C++ 
+code to use the Rust implementation without requiring the C++ application to depend directly on Rust-specific representations.
+
+\subsection{Scope and API Mapping}
+Boost.Endian provides a considerably broader API. The original library supports integer sizes from 8 to 64 bits, 
+including non-standard sizes such as 24, 40 and 48 bits, together with aligned and unaligned buffer and arithmetic types. 
+It also provides conversion functions and support for user-defined types.
+
+The Rust implementation reproduces the three principal approaches but does not attempt to reproduce every Boost.Endian 
+typedef and ABI detail.
+
+The implementation mapping is the following:
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{|l|l|p{5.5cm}|}
+        \hline
+        \textbf{Boost.Endian concept} &
+        \textbf{Rust implementation} &
+        \textbf{Purpose} \\
+        \hline
+
+        \texttt{endian\_reverse} &
+        \texttt{endian\_reverse} &
+        Reverse the byte representation \\
+        \hline
+
+        \texttt{big\_to\_native} &
+        \texttt{big\_to\_native} &
+        Convert big-endian representation to native order \\
+        \hline
+
+        \texttt{native\_to\_big} &
+        \texttt{native\_to\_big} &
+        Convert native representation to big-endian order \\
+        \hline
+
+        \texttt{little\_to\_native} &
+        \texttt{little\_to\_native} &
+        Convert little-endian representation to native order \\
+        \hline
+
+        \texttt{native\_to\_little} &
+        \texttt{native\_to\_little} &
+        Convert native representation to little-endian order \\
+        \hline
+
+        In-place conversions &
+        \texttt{\*\_inplace} functions &
+        Modify an existing value \\
+        \hline
+
+        Endian load/store &
+        \texttt{load\_\*} / \texttt{store\_\*} &
+        Convert between byte arrays and native values \\
+        \hline
+
+        \texttt{endian\_buffer} &
+        \texttt{EndianBuf<E,T>} &
+        Explicit endian-aware storage \\
+        \hline
+
+        Buffer typedefs &
+        \texttt{BigEndianBuf<T>}, \texttt{LittleEndianBuf<T>} &
+        Convenient typed interfaces \\
+        \hline
+
+        \texttt{endian\_arithmetic} &
+        \texttt{EndianInt<E,T>} &
+        Endian-aware arithmetic type \\
+        \hline
+
+        Arithmetic typedefs &
+        \texttt{BigEndianInt<T>}, \texttt{LittleEndianInt<T>} &
+        Convenient arithmetic types \\
+        \hline
+
+        C++ interoperability &
+        \texttt{ffi} / \texttt{cxx} &
+        C++ access to Rust functionality \\
+        \hline
+
+    \end{tabular}
+    \caption{Mapping between Boost.Endian concepts and their Rust implementation.}
+    \label{tab:boost-endian-rust-mapping}
+\end{table}
+
+The implementation therefore preserves the architectural model of Boost.Endian without requiring a literal 
+translation of the C++ template hierarchy.
+
+The root crate also defines Boost.Endian-style aliases such as:
+
+\begin{lstlisting}[style=rustblock]
+pub type BigInt32BufT = BigEndianBuf<i32>;
+pub type BigUInt32BufT = BigEndianBuf<u32>;
+
+pub type BigInt32T = BigEndianInt<i32>;
+pub type BigUInt32T = BigEndianInt<u32>;
+\end{lstlisting}
+
+This provides an interface that is recognizable to users familiar with the Boost library while retaining Rust's 
+generic and trait-based implementation model.
+
+The original Boost library explicitly distinguishes buffer types from arithmetic types because buffer conversions 
+are explicit whereas arithmetic conversions are implicit. This distinction is preserved in the Rust design.
+
+
+\subsection{Endian Representation}
+The fundamental design decision in the Rust implementation is to represent byte ordering through \
+textbf{compile-time encoding types}.
+
+Three marker types are defined:
+
+\begin{lstlisting}[style=rustblock]
+pub struct BigEndian;
+pub struct LittleEndian;
+pub struct NativeEndian;
+\end{lstlisting}
+
+These types implement the \texttt{Encoding} trait:
+
+\begin{lstlisting}[style=rustblock]
+pub trait Encoding: Copy {
+fn to_stored<T: EndianReversible>(native: T) -> T;
+fn to_native<T: EndianReversible>(stored: T) -> T;
+}
+\end{lstlisting}
+
+The marker type therefore determines how a value is converted to and from its stored representation.
+
+For example, the big-endian implementation performs a conversion only when the host machine is little-endian:
+
+\begin{lstlisting}[style=rustblock]
+impl Encoding for BigEndian {
+fn to_stored<T: EndianReversible>(v: T) -> T {
+if NATIVE_ORDER == Order::Big {
+v
+} else {
+v.endian_reverse()
+}
+}
+}
+\end{lstlisting}
+
+The native byte order is determined at compilation using Rust's target configuration:
+
+\begin{lstlisting}[style=rustblock]
+pub const NATIVE_ORDER: Order = {
+#[cfg(target_endian = "big")]
+{
+Order::Big
+}
+#[cfg(target_endian = "little")]
+{
+Order::Little
+}
+};
+\end{lstlisting}
+
+This means that the decision whether a byte swap is required is resolved according to the target architecture rather 
+than being detected dynamically at runtime.
+
+The actual byte reversal is abstracted through the \texttt{EndianReversible} trait:
+
+\begin{lstlisting}[style=rustblock]
+pub trait EndianReversible: Sized + Copy {
+fn endian_reverse(self) -> Self;
+}
+\end{lstlisting}
+
+The trait is implemented for Rust's primitive integer types and for \texttt{f32} and \texttt{f64}.
+
+For integer types, Rust's native \texttt{swap\_bytes()} operation is used:
+
+\begin{lstlisting}[style=rustblock]
+impl EndianReversible for u32 {
+fn endian_reverse(self) -> Self {
+self.swap_bytes()
+}
+}
+\end{lstlisting}
+
+Floating-point values are handled by converting the floating-point value to its bit representation, reversing those bits 
+as a byte sequence, and converting the result back:
+
+\begin{lstlisting}[style=rustblock]
+Self::from_bits(self.to_bits().swap_bytes())
+\end{lstlisting}
+
+The operation is therefore a transformation of the binary representation rather than a numerical floating-point operation.
+
+This design is consistent with the purpose of Boost.Endian, where the objective is to manipulate the representation of 
+arithmetic values independently of the host architecture. Boost.Endian also supports floating-point types in its more 
+recent buffer and arithmetic interfaces.
+
+\subsection{Endian Conversion Functions}
+The first implementation approach corresponds to Boost.Endian's conversion-function interface.
+
+The Rust implementation provides:
+
+\begin{lstlisting}[style=rustblock]
+endian_reverse()
+big_to_native()
+native_to_big()
+little_to_native()
+native_to_little()
+\end{lstlisting}
+
+together with their in-place variants:
+
+\begin{lstlisting}[style=rustblock]
+endian_reverse_inplace()
+big_to_native_inplace()
+native_to_big_inplace()
+little_to_native_inplace()
+native_to_little_inplace()
+\end{lstlisting}
+
+These functions operate directly on ordinary Rust values.
+
+For example:
+
+\begin{lstlisting}[style=rustblock]
+let value = 0x01020304u32;
+
+let reversed = endian_reverse(value);
+\end{lstlisting}
+
+produces:
+
+\begin{lstlisting}[style=rustblock]
+0x04030201
+\end{lstlisting}
+
+The conversion between a specified byte order and the native byte order is implemented conditionally:
+
+\begin{lstlisting}[style=rustblock]
+pub fn big_to_native<T: EndianReversible>(x: T) -> T {
+if NATIVE_ORDER == Order::Big {
+x
+} else {
+x.endian_reverse()
+}
+}
+\end{lstlisting}
+
+The reverse conversion is symmetric:
+
+\begin{lstlisting}[style=rustblock]
+pub fn native_to_big<T: EndianReversible>(x: T) -> T {
+big_to_native(x)
+}
+\end{lstlisting}
+
+The same structure is used for little-endian conversion.
+
+This provides an important property: when the requested representation already matches the native byte order, 
+the conversion does not perform a byte swap.
+
+The implementation also provides a conditional conversion function:
+
+\begin{lstlisting}[style=rustblock]
+conditional_reverse(x, from, to)
+\end{lstlisting}
+
+which resolves \texttt{Order::Native} and reverses the value only when the source and destination representations differ.
+
+This corresponds to the Boost.Endian design in which conversion functions are intended for applications where the 
+programmer wants explicit control over when conversion occurs. Boost documents both mutating and non-mutating conversion 
+operations, including conditional variants.
+
+\subsubsection{Load and Store Operations}
+
+In addition to conversions between native values, the implementation provides explicit load and store operations.
+
+For example:
+
+\begin{lstlisting}[style=rustblock]
+pub fn load_big_u32(p: &[u8; 4]) -> u32 {
+u32::from_be_bytes(*p)
+}
+\end{lstlisting}
+
+and:
+
+\begin{lstlisting}[style=rustblock]
+pub fn store_big_u32(p: &mut [u8; 4], v: u32) {
+*p = v.to_be_bytes();
+}
+\end{lstlisting}
+
+Equivalent functions are provided for little-endian values and for signed and unsigned 16-, 32- and 64-bit integers.
+
+These functions provide a direct abstraction for binary data processing:
+
+\begin{lstlisting}[style=rustblock]
+byte representation
+|
+v
+load_big_u32()
+|
+v
+native u32
+|
+v
+application processing
+|
+v
+store_big_u32()
+|
+v
+byte representation
+\end{lstlisting}
+
+The use of fixed-size arrays such as \texttt{[u8; 4]} is significant because the size requirement is represented directly in the Rust type system. A four-byte load cannot accidentally receive a three-byte array.
+
+\subsubsection{24-bit Values}
+
+The implementation additionally provides 24-bit load and store functions:
+
+\begin{lstlisting}[style=rustblock]
+load_big_u24()
+load_big_s24()
+load_little_u24()
+load_little_s24()
+
+store_big_u24()
+store_big_s24()
+store_little_u24()
+store_little_s24()
+\end{lstlisting}
+
+Unsigned 24-bit values are represented using \texttt{u32}, while signed 24-bit values are represented using \texttt{i32}.
+
+For signed values, the implementation explicitly performs sign extension:
+
+\begin{lstlisting}[style=rustblock]
+if raw & 0x0080_0000 != 0 {
+(raw | 0xFF00_0000) as i32
+} else {
+raw as i32
+}
+\end{lstlisting}
+
+This is required because Rust, like C++, does not provide a native 24-bit integer type.
+
+The implementation therefore preserves the external three-byte representation while using a standard 32-bit integer 
+internally.
+
+This is particularly relevant because one of the motivations for Boost.Endian is support for binary formats whose 
+integer field sizes do not correspond directly to native C++ integer sizes. 
+The original library supports 8-, 16-, 24-, 32-, 40-, 48-, 56- and 64-bit buffer and arithmetic representations.
+
+The current C++ \texttt{cxx} bridge, however, exposes the 16-, 32- and 64-bit load/store operations rather than 
+the 24-bit Rust functions. Thus, the 24-bit functionality exists in the Rust implementation but is not currently 
+part of the demonstrated C++ interoperability surface.
+
+\subsection{Endian Buffer Types}
+The second approach is implemented through the generic type:
+
+\begin{lstlisting}[style=rustblock]
+pub struct EndianBuf<E: Encoding, T: EndianReversible> {
+stored: T,
+_enc: PhantomData<E>,
+}
+\end{lstlisting}
+
+The encoding is represented by the type parameter \texttt{E}, while \texttt{T} specifies the underlying value type.
+
+Three convenient aliases are provided:
+
+\begin{lstlisting}[style=rustblock]
+pub type BigEndianBuf<T> =
+EndianBuf<BigEndian, T>;
+
+pub type LittleEndianBuf<T> =
+EndianBuf<LittleEndian, T>;
+
+pub type NativeEndianBuf<T> =
+EndianBuf<NativeEndian, T>;
+\end{lstlisting}
+
+A value is constructed from a native-endian value:
+
+\begin{lstlisting}[style=rustblock]
+let buffer: BigEndianBuf<u32> =
+BigEndianBuf::new(0x01020304);
+\end{lstlisting}
+
+The constructor immediately converts the value into the requested stored representation:
+
+\begin{lstlisting}[style=rustblock]
+Self {
+stored: E::to_stored(native),
+_enc: PhantomData,
+}
+\end{lstlisting}
+
+The conversion back to native order occurs explicitly through \texttt{get()}:
+
+\begin{lstlisting}[style=rustblock]
+pub fn get(self) -> T {
+E::to_native(self.stored)
+}
+\end{lstlisting}
+
+Values can be replaced using:
+
+\begin{lstlisting}[style=rustblock]
+pub fn set(&mut self, native: T)
+\end{lstlisting}
+
+This preserves the fundamental semantic difference between the Boost.Endian buffer and arithmetic approaches.
+
+With the buffer representation, conversion is explicit:
+
+\begin{lstlisting}[style=rustblock]
+let mut value: BigEndianBuf<u32> =
+BigEndianBuf::new(10);
+
+value.set(20);
+
+let native = value.get();
+\end{lstlisting}
+
+The type itself does not automatically participate in arithmetic operations.
+
+The implementation uses:
+
+\begin{lstlisting}[style=rustblock]
+#[repr(transparent)]
+\end{lstlisting}
+
+for \texttt{EndianBuf}.
+
+This makes the wrapper have the same representation characteristics as its stored value for ABI purposes. 
+The project also contains explicit tests verifying that:
+
+\begin{lstlisting}[style=rustblock]
+size_of::<BigEndianBuf<u32>>()
+== size_of::<u32>()
+\end{lstlisting}
+
+and:
+
+\begin{lstlisting}[style=rustblock]
+size_of::<LittleEndianBuf<i64>>()
+== size_of::<i64>()
+\end{lstlisting}
+
+The stored value is already converted to the target byte order, meaning that its memory representation can be used 
+directly for binary I/O.
+
+This corresponds closely to the purpose of Boost.Endian buffer types. Boost describes an endian buffer as a 
+byte-holder whose byte order is independent of the native architecture and whose conversions are explicitly controlled 
+by the programmer.
+
+\subsubsection{Equality and Ordering}
+
+The Rust implementation deliberately distinguishes equality from ordering.
+
+Equality compares the stored representation:
+
+\begin{lstlisting}[style=rustblock]
+self.stored == other.stored
+\end{lstlisting}
+
+while ordering converts the values to native representation:
+
+\begin{lstlisting}[style=rustblock]
+self.get().cmp(&other.get())
+\end{lstlisting}
+
+This allows ordering to represent the numerical meaning of the stored values rather than their byte representation.
+
+Hashing is performed on the stored representation:
+
+\begin{lstlisting}[style=rustblock]
+self.stored.hash(state)
+\end{lstlisting}
+
+which maintains consistency with the equality implementation.
+
+The buffer type also implements standard Rust traits including \texttt{Clone}, \texttt{Copy}, \texttt{Default}, 
+\texttt{Debug} and \texttt{Display} where the underlying type supports the corresponding trait.
+
+\subsection{Endian Arithmetic Types}
+The third approach is implemented by:
+
+\begin{lstlisting}[style=rustblock]
+pub struct EndianInt<E: Encoding, T: EndianReversible> {
+stored: T,
+_enc: PhantomData<E>,
+}
+\end{lstlisting}
+
+This structure is conceptually similar to \texttt{EndianBuf}, but additionally implements arithmetic and 
+bitwise operators.
+
+The two primary aliases are:
+
+\begin{lstlisting}[style=rustblock]
+pub type BigEndianInt<T> =
+EndianInt<BigEndian, T>;
+
+pub type LittleEndianInt<T> =
+EndianInt<LittleEndian, T>;
+\end{lstlisting}
+
+Native-endian arithmetic types are also provided:
+
+\begin{lstlisting}[style=rustblock]
+pub type NativeEndianInt<T> =
+EndianInt<NativeEndian, T>;
+\end{lstlisting}
+
+The important difference from the buffer type is the conversion model.
+
+Construction can occur implicitly:
+
+\begin{lstlisting}[style=rustblock]
+let mut x: BigEndianInt<i32> = 100.into();
+\end{lstlisting}
+
+and conversion back to the native value is also supported through \texttt{From}:
+
+\begin{lstlisting}[style=rustblock]
+let value: i32 = x.into();
+\end{lstlisting}
+
+The implementation additionally provides:
+
+\begin{lstlisting}[style=rustblock]
+x.get()
+\end{lstlisting}
+
+for explicit retrieval.
+
+\subsubsection{Arithmetic Operators}
+
+The implementation provides the standard binary arithmetic operations:
+
+\begin{lstlisting}[style=rustblock]
++
+-
+
+*
+
+/
+%
+\end{lstlisting}
+
+as well as bitwise operations:
+
+\begin{lstlisting}[style=rustblock]
+&
+|
+^
+<<
+
+> >
+
+\end{lstlisting}
+
+Both endian-aware values and native scalar values are supported.
+
+For example:
+
+\begin{lstlisting}[style=rustblock]
+let mut x: BigEndianInt<i32> = 100.into();
+
+x += 42;
+x *= 2;
+x -= 84;
+x /= 4;
+\end{lstlisting}
+
+Each operation retrieves the native representation, performs the operation using the underlying Rust type 
+and stores the result back into the selected byte order.
+
+The implementation follows this pattern:
+
+\begin{lstlisting}[style=rustblock]
+Self::new(
+self.get().$method(rhs.get())
+)
+\end{lstlisting}
+
+for operations involving two endian-aware values.
+
+Assignment operations follow the equivalent approach:
+
+\begin{lstlisting}[style=rustblock]
+self.set(
+self.get().$base_method(rhs.get())
+);
+\end{lstlisting}
+
+Unary \texttt{Neg} and \texttt{Not} operations are also implemented.
+
+Rust does not provide C++'s \texttt{++} and \texttt{--} operators, so the implementation instead exposes:
+
+\begin{lstlisting}[style=rustblock]
+x.inc();
+x.dec();
+\end{lstlisting}
+
+These provide the equivalent semantic operation.
+
+This is an example of where the implementation preserves the functionality rather than reproducing the C++ syntax 
+exactly.
+
+Boost.Endian's arithmetic types are specifically intended to provide the same general operations as ordinary 
+arithmetic types while performing the necessary endian conversion implicitly.
+
+\subsubsection{Comparison and Ordering}
+
+The arithmetic type implements \texttt{PartialEq}, \texttt{Eq}, \texttt{PartialOrd} and \texttt{Ord}.
+
+Unlike raw byte comparison, ordering is performed on the native numerical values:
+
+\begin{lstlisting}[style=rustblock]
+self.get().cmp(&other.get())
+\end{lstlisting}
+
+This ensures that:
+
+\begin{lstlisting}[style=rustblock]
+let a: BigEndianInt<i32> = 10.into();
+let b: BigEndianInt<i32> = 20.into();
+
+assert!(a < b);
+\end{lstlisting}
+
+has the expected numerical semantics.
+
+The implementation also provides \texttt{Hash}, \texttt{Clone}, \texttt{Copy}, \texttt{Default}, \texttt{Debug} and \texttt{Display} 
+where appropriate.
+
+\subsubsection{Conversion Hoisting}
+
+The project explicitly demonstrates the performance consideration documented by Boost.Endian: repeated implicit 
+conversions inside computational loops can be avoided by converting the value once, performing the computation using 
+the native value, and storing the result back afterwards.
+
+The C++ demonstration contains the equivalent pattern:
+
+\begin{lstlisting}[style=cppblock]
+int32_t native_v = int32_t(big_v);
+
+for (int32_t i = 0; i < 1000; ++i)
+native_v += i;
+
+big_v = native_v;
+\end{lstlisting}
+
+The demonstration therefore reproduces one of the optimization patterns discussed in the Boost.Endian documentation. 
+Boost notes that arithmetic types can perform repeated implicit conversions and that conversions can be hoisted out of 
+performance-critical loops when appropriate.
+
+
+\subsection{C++ Interoperability}
+
+C++ interoperability is implemented through the \texttt{cxx} crate rather than a manually constructed \texttt{extern "C"} interface.
+
+The crate declares a C++11-compatible bridge using:
+
+\begin{lstlisting}[style=rustblock]
+#[cxx::bridge(namespace = "boost_endian")]
+pub mod ffi
+\end{lstlisting}
+
+The build script invokes:
+
+\begin{lstlisting}[style=rustblock]
+cxx_build::bridge("src/ffi.rs")
+.std("c++11")
+.compile("endian_bridge");
+\end{lstlisting}
+
+The resulting bridge generates C++ headers and a bridge library.
+
+The Rust crate itself is built as a static library:
+
+\begin{lstlisting}
+[lib]
+name = "endian"
+path = "src/lib.rs"
+crate-type = ["staticlib"]
+\end{lstlisting}
+
+The C++ application can consequently link against the Rust library and generated bridge.
+
+The project documents the corresponding build sequence:
+
+\begin{lstlisting}
+cargo build --release
+|
+v
+generated cxx bridge
+|
+v
+libendian.a
+libendian_bridge.a
+|
+v
+g++ C++ application
+\end{lstlisting}
+
+The C++ application includes:
+
+\begin{lstlisting}[style=cppblock]
+#include "rust/cxx.h"
+#include "boost-endian/src/ffi.rs.h"
+\end{lstlisting}
+
+and uses the functions exposed by the bridge in the \texttt{boost\_endian} namespace.
+
+\subsubsection{Conversion Interface}
+
+The FFI exposes explicit functions for:
+
+\begin{itemize}
+\item byte reversal;
+\item big-endian/native conversion;
+\item native/big-endian conversion;
+\item little-endian/native conversion;
+\item native/little-endian conversion;
+\item loading values from byte slices; and
+\item storing values into byte slices.
+\end{itemize}
+
+For example:
+
+\begin{lstlisting}[style=cppblock]
+uint32_t value =
+load_big_u32(
+rust::Slice<const uint8_t>(buf, 4)
+);
+\end{lstlisting}
+
+and:
+
+\begin{lstlisting}[style=cppblock]
+store_big_u32(
+rust::Slice<uint8_t>(buf, 4),
+0xCAFEBABE
+);
+\end{lstlisting}
+
+The use of \texttt{rust::Slice} allows the C++ caller to provide an existing memory region without transferring ownership of the memory to Rust.
+
+\subsubsection{Buffer Interface}
+
+The bridge also exposes shared structures such as:
+
+\begin{lstlisting}[style=rustblock]
+struct BigInt32Buf {
+raw: i32
+}
+\end{lstlisting}
+
+and:
+
+\begin{lstlisting}[style=rustblock]
+struct LittleUInt64Buf {
+raw: u64
+}
+\end{lstlisting}
+
+The \texttt{raw} member contains the value in the selected target byte order.
+
+C++ can therefore create and retrieve values through:
+
+\begin{lstlisting}[style=cppblock]
+BigInt32Buf b =
+big_int32_buf_new(0x01020304);
+
+int32_t value =
+big_int32_buf_get(b);
+\end{lstlisting}
+
+The demonstration additionally inspects the raw representation to verify that a big-endian value has its most significant byte first and a 
+little-endian value has its least significant byte first on the tested little-endian host.
+
+\subsubsection{Arithmetic Interface}
+
+The \texttt{cxx} bridge itself does not expose Rust operator overloading directly to C++. Consequently, the project implements a thin C++ 
+template on top of the bridge functions.
+
+The template stores an FFI buffer and performs operations by:
+
+\begin{enumerate}
+\item retrieving the native value;
+\item performing the C++ operation; and
+\item converting the result back to the endian buffer.
+\end{enumerate}
+
+This provides a C++ interface resembling Boost.Endian's arithmetic types without attempting to expose Rust's operator traits directly through 
+the FFI.
+
+This is an important example of semantic adaptation rather than literal translation: Rust's \texttt{Add}, \texttt{Sub}, \texttt{Mul} and 
+assignment traits are appropriate within Rust, while a C++ template is used to reproduce the corresponding C++ programming model on the 
+other side of the interoperability boundary.
+
+
+\subsection{Unsafe Code isolation}
+
+A major difference between the Boost.Endian and Boost.Align implementations is that the endian implementation requires substantially less 
+\texttt{unsafe} Rust code.
+
+The core endian operations are implemented using safe Rust primitives:
+
+\begin{lstlisting}[style=rustblock]
+swap_bytes()
+to_be_bytes()
+from_be_bytes()
+to_le_bytes()
+from_le_bytes()
+copy_from_slice()
+\end{lstlisting}
+
+No raw-pointer manipulation is required for the Rust-native conversion, buffer, or arithmetic abstractions.
+
+The load functions use fixed-size Rust arrays and indexing:
+
+\begin{lstlisting}[style=rustblock]
+u32::from_be_bytes([
+p[0], p[1], p[2], p[3]
+])
+\end{lstlisting}
+
+while the store functions use:
+
+\begin{lstlisting}[style=rustblock]
+p[..4].copy_from_slice(
+&v.to_be_bytes()
+);
+\end{lstlisting}
+
+The safety properties of these operations are therefore enforced by Rust's slice and array abstractions.
+
+The FFI boundary uses \texttt{cxx\:\:bridge} and \texttt{rust\:\:Slice} rather than manually reconstructing Rust slices from raw C++ pointers. 
+This significantly reduces the amount of explicit \texttt{unsafe} code needed for interoperability.
+
+The C++ caller is nevertheless responsible for providing valid buffers of the required size. The Rust functions index the supplied slices 
+directly, so an undersized slice results in a Rust bounds failure. The FFI module explicitly documents this precondition:
+
+\begin{lstlisting}[style=textblock]
+p must be a slice of at least N bytes
+\end{lstlisting}
+
+This is an important boundary condition for production integration. The current implementation relies on Rust's bounds checking rather than 
+exposing unchecked raw-pointer access, but the error path is not converted into an explicit C++ error or status value.
+
+The implementation comments also acknowledge that a panic resulting from an undersized slice crosses the FFI boundary through the \texttt{cxx} 
+machinery and is not intended to be used as a normal error-reporting mechanism.
+
+For the research implementation, this provides a relatively small safety boundary. For production automotive integration, invalid input lengths 
+would preferably be rejected before invoking the Rust function or represented through an explicit fallible interface.
+
+Overall, the endian implementation demonstrates that much of the functionality traditionally implemented through low-level byte manipulation in 
+C++ can be expressed using safe Rust primitives.
+
+This directly supports one of the migration objectives established in \ref{chap:Chapter5}: preserve the relevant library behaviour 
+while minimizing and isolating \texttt{unsafe} Rust, particularly around interoperability boundaries.
+
+
+\subsection{Boost.Endian Test Suite}
+
+The Rust implementation contains unit tests for each of the three approaches.
+
+\subsubsection{Conversion Tests}
+
+The conversion module tests byte reversal:
+
+\begin{lstlisting}[style=rustblock]
+assert_eq!(
+endian_reverse(0x01020304u32),
+0x04030201u32
+);
+\end{lstlisting}
+
+Round-trip tests verify that converting to an endian representation and back produces the original value:
+
+\begin{lstlisting}[style=rustblock]
+let v: u32 = 0xDEAD_BEEF;
+
+assert_eq!(
+big_to_native(native_to_big(v)),
+v
+);
+\end{lstlisting}
+
+The same pattern is tested for little-endian 64-bit values.
+
+The load/store interface is also tested:
+
+\begin{lstlisting}[style=rustblock]
+let mut buf = [0u8; 4];
+
+store_big_u32(
+&mut buf,
+0xCAFE_BABE
+);
+
+assert_eq!(
+load_big_u32(&buf),
+0xCAFE_BABE
+);
+\end{lstlisting}
+
+A dedicated test validates signed 24-bit sign extension:
+
+\begin{lstlisting}[style=rustblock]
+store_big_s24(&mut buf, -1);
+assert_eq!(load_big_s24(&buf), -1);
+
+store_little_s24(&mut buf, -42);
+assert_eq!(load_little_s24(&buf), -42);
+\end{lstlisting}
+
+Floating-point byte reversal is also validated through a double-reversal test:
+
+\begin{lstlisting}[style=rustblock]
+let v = std::f32::consts::PI;
+
+assert_eq!(
+endian_reverse(endian_reverse(v)),
+v
+);
+\end{lstlisting}
+
+Finally, the in-place implementation is compared against the corresponding value-returning implementation.
+
+\subsubsection{Buffer Tests}
+
+The buffer implementation tests:
+
+\begin{itemize}
+\item big-endian round trips;
+\item little-endian round trips;
+\item byte representation;
+\item equality;
+\item ordering;
+\item mutation through \texttt{set()}; and
+\item size equivalence with the underlying primitive type.
+\end{itemize}
+
+For example:
+
+\begin{lstlisting}[style=rustblock]
+let buf: BigEndianBuf<u32> =
+BigEndianBuf::new(0xDEAD_BEEF);
+
+assert_eq!(
+buf.get(),
+0xDEAD_BEEF
+);
+\end{lstlisting}
+
+The size test is particularly relevant to interoperability:
+
+\begin{lstlisting}[style=rustblock]
+assert_eq!(
+size_of::<BigEndianBuf<u32>>(),
+size_of::<u32>()
+);
+\end{lstlisting}
+
+This verifies the expected transparent representation.
+
+\subsubsection{Arithmetic Tests}
+
+The arithmetic implementation validates implicit construction, arithmetic assignment, ordering, size, and repeated accumulation.
+
+For example:
+
+\begin{lstlisting}[style=rustblock]
+let mut x: BigEndianInt<i32> =
+100.into();
+
+x += 42;
+
+assert_eq!(
+x.get(),
+142
+);
+\end{lstlisting}
+
+The test suite also performs a Gauss-sum style workload:
+
+\begin{lstlisting}[style=rustblock]
+let mut x: BEi32 = 0.into();
+
+for i in 1..=100_i32 {
+x += i;
+}
+
+assert_eq!(x.get(), 5050);
+\end{lstlisting}
+
+This tests the interaction between repeated arithmetic operations and endian conversion.
+
+\subsubsection{C++ Integration Tests}
+
+The C++ demonstration exercises all three approaches.
+
+The conversion tests verify:
+
+\begin{lstlisting}[style=textblock]
+endian_reverse
+native -> big -> native
+native -> little -> native
+store -> load
+\end{lstlisting}
+
+The buffer tests verify both the numerical value and the underlying byte representation.
+
+A mixed-endian structure is also constructed:
+
+\begin{lstlisting}[style=cppblock]
+struct Header {
+BigInt32Buf     file_code;
+BigInt32Buf     file_length;
+LittleInt32Buf  version;
+LittleInt32Buf  shape_type;
+};
+\end{lstlisting}
+
+The test confirms that the big- and little-endian fields have different byte representations while retaining their correct numerical values.
+
+A second example models a mixed-endian binary record:
+
+\begin{lstlisting}[style=cppblock]
+struct Record {
+BigUInt32Buf    magic;
+LittleUInt16Buf seq;
+BigInt32Buf     payload_len;
+};
+\end{lstlisting}
+
+The resulting structure is checked with a \texttt{static\_assert}, and its binary representation is printed and inspected.
+
+This demonstrates a practical use case for endian-aware data structures: a single record may contain fields with different externally 
+specified byte orders.
+
+\subsubsection{FFI Overhead Benchmark}
+
+The repository additionally contains a dedicated FFI benchmark.
+
+The benchmark compares two implementations:
+
+\begin{lstlisting}[style=textblock]
+C++ Native
+manual big-endian byte shifts
+
+Rust FFI
+cxx bridge load/store
+\end{lstlisting}
+
+The benchmark operates on arrays of 64-bit values and executes 50 iterations for each tested input size.
+
+The tested element counts are:
+
+\begin{lstlisting}[style=textblock]
+2^8
+2^14
+2^20
+2^24
+\end{lstlisting}
+
+corresponding to approximately:
+
+\begin{lstlisting}[style=textblock]
+2 KiB
+128 KiB
+8 MiB
+128 MiB
+\end{lstlisting}
+
+of data per iteration.
+
+For the native C++ implementation, the benchmark manually reconstructs a 64-bit value from eight bytes and subsequently writes the 
+incremented value back to the byte array.
+
+The Rust implementation performs the equivalent operation through:
+
+\begin{lstlisting}[style=rustblock]
+load_big_u64(...)
+\end{lstlisting}
+
+followed by:
+
+\begin{lstlisting}[style=rustblock]
+store_big_u64(...)
+\end{lstlisting}
+
+through the \texttt{cxx} bridge.
+
+The benchmark records:
+
+\begin{itemize}
+\item total execution time;
+\item time per iteration in milliseconds;
+\item time per iteration in nanoseconds;
+\item throughput in GB/s; and
+\item correctness.
+\end{itemize}
+
+The benchmark also computes the relative overhead:
+
+$$
+\text{overhead} =
+\left(
+\frac{T_{\mathrm{Rust\,FFI}}}
+     {T_{\mathrm{C++}}}
+-1
+\right)\times100
+$$
+
+This allows the cost of crossing the Rust/C++ interface to be evaluated independently of functional correctness.
+
+The repository's \texttt{endian\_comparison.md} also documents several implementation variants developed during the project. 
+It identifies the original \texttt{endian} crate as the Rust-native baseline and describes later variants based on different C/C++ 
+interoperability approaches, including a \texttt{cxx}-based implementation. This provides useful experimental context, 
+while the implementation described in this section corresponds to the \texttt{endian} crate contained in the repository together with 
+its current \texttt{cxx} integration.
+
+\subsection{Implementation Summary}
+
+The Boost.Endian reimplementation demonstrates that the three conceptual approaches provided by the original C++ library can be mapped 
+naturally onto Rust abstractions.
+
+The resulting architecture can be summarized as follows:
+
+\begin{lstlisting}[style=textblock]
+Boost.Endian
+|
++----------------+----------------+
+|                |                |
+Conversion          Buffer          Arithmetic
+Functions           Types             Types
+|                |                |
+v                v                v
+conversion.rs      buffer.rs       arithmetic.rs
+|                |                |
++----------------+----------------+
+|
+EndianReversible
+|
+v
+Native Rust types
+|
+v
+ffi.rs
+|
+cxx bridge
+|
+v
+C++ code
+\end{lstlisting}
+
+The conversion layer provides explicit byte-order transformations and binary load/store functions. The buffer layer associates a fixed byte 
+order with stored values while requiring explicit conversion to native values. The arithmetic layer adds operator support and implicit 
+conversion semantics.
+
+This structure preserves the principal semantic distinction made by Boost\.Endian: 
+\textbf{conversion functions and buffer types provide explicit conversion control, while arithmetic types provide convenience through 
+implicit conversion and direct arithmetic operations}.
+
+The implementation also demonstrates a reduction in unsafe code compared with a direct low-level C++ translation. The Rust-native 
+implementation relies primarily on safe standard-library operations such as \texttt{swap\_bytes()}, \texttt{to\_be\_bytes()}, 
+\texttt{from\_be\_bytes()}, \texttt{to\_le\_bytes()}, and \texttt{from\_le\_bytes()}. 
+Consequently, byte-order manipulation does not require manual pointer arithmetic or memory reinterpretation.
+
+The C++ interoperability layer is kept separate through \texttt{ffi.rs} and the \texttt{cxx} bridge. This provides a defined boundary 
+between the Rust implementation and existing C++ applications while retaining the original library's three conceptual usage models.
+
+Finally, the implementation demonstrates that Boost.Endian's functionality can be reproduced without reproducing its C++ template hierarchy 
+literally. The resulting design is instead based on Rust traits, generic types, type aliases, and operator traits, providing equivalent 
+functionality while following the abstractions of the target language.
+
+This is consistent with the migration strategy established for the project: the goal is to preserve relevant observable behaviour and 
+functionality rather than mechanically reproduce the internal structure of the original Boost implementation. 
+The dissertation identifies this as an explicit migration objective alongside C++ interoperability, Rust memory and type safety, acceptable 
+performance, and isolation of unsafe code.
+
+\subsubsection{Important Scope Note}
+
+There are several differences between \textbf{Boost.Endian 1.91.0} and the current project implementation that should be made explicit rather 
+than implying complete API equivalence:
+
+\begin{itemize}
+\item Boost supports \textbf{8-, 16-, 24-, 32-, 40-, 48-, 56- and 64-bit} buffer and arithmetic representations. 
+The Rust implementation provides the 24-bit conversion functions, but its generic \texttt{EndianBuf} and \texttt{EndianInt} types operate on 
+standard Rust primitive types rather than arbitrary bit widths.
+
+```
+\item Boost provides both \textbf{aligned and unaligned} buffer and arithmetic variants. The Rust implementation does not reproduce this 
+distinction as a separate generic alignment parameter.
+
+\item The Rust \texttt{cxx} bridge currently exposes the \textbf{16-, 32- and 64-bit} buffer and load/store interfaces. 
+The 24-bit functionality remains available in the Rust conversion layer rather than being exposed through the demonstrated C++ bridge.
+
+\item The C++ arithmetic interface is implemented as a \textbf{C++ wrapper over the Rust bridge}, because \texttt{cxx} does not directly 
+expose the Rust operator-trait implementation as a C++ operator-overloaded type.
+
+\item The repository's \texttt{endian\_comparison.md} records that several implementation variants were explored during development. 
+Therefore, benchmark and implementation-status statements should refer specifically to the variant being evaluated rather than treating all 
+variants as a single final implementation.
+```
+
+\end{itemize}
+
+These limitations are not necessarily shortcomings of the migration. Rather, they demonstrate that the project implements a 
+\textbf{selected, semantically relevant subset of Boost.Endian}, while adapting the interface to Rust and preserving C++ interoperability 
+where required. The original Boost documentation itself describes the three approaches as alternatives with different engineering trade-offs 
+rather than requiring every application to use every facility.
+
+
+
+

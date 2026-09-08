@@ -21,10 +21,10 @@ static double now_sec() {
     return (double)ts.tv_sec + (double)ts.tv_nsec * 1e-9;
 }
 
-struct MemSnapshot { long rss_kb; long virt_kb; };
+struct MememorySnapshot { long rss_kb; long virt_kb; };
 
-static MemSnapshot read_mem() {
-    MemSnapshot s = {0, 0};
+static MememorySnapshot read_mem() {
+    MememorySnapshot s = {0, 0};
     FILE* f = fopen("/proc/self/status", "r");
     if (!f) return s;
     char line[128];
@@ -96,11 +96,11 @@ static void run_boost(BenchResult* r, std::size_t N, int ITERS) {
 
     const std::size_t ALIGN = 32;
 
-    MemSnapshot mb = read_mem();
+    MememorySnapshot mb = read_mem();
     float* buf = static_cast<float*>(
         boost::alignment::aligned_alloc(ALIGN, N * sizeof(float)));
     if (!buf) { fprintf(stderr, "boost alloc failed\n"); exit(1); }
-    MemSnapshot ma = read_mem();
+    MememorySnapshot ma = read_mem();
 
     r->rss_before_alloc_kb  = mb.rss_kb;
     r->rss_after_alloc_kb   = ma.rss_kb;
@@ -114,14 +114,14 @@ static void run_boost(BenchResult* r, std::size_t N, int ITERS) {
     for (std::size_t i = 0; i < N; ++i) buf[i] = 1.0f;
     double_f32_avx_cpp(buf, N);
 
-    MemSnapshot mr0 = read_mem();
+    MememorySnapshot mr0 = read_mem();
     double t0 = now_sec();
     for (int it = 0; it < ITERS; ++it) {
         for (std::size_t i = 0; i < N; ++i) buf[i] = 1.0f;
         double_f32_avx_cpp(buf, N);
     }
     double t1 = now_sec();
-    MemSnapshot mr1 = read_mem();
+    MememorySnapshot mr1 = read_mem();
 
     r->rss_before_run_kb = mr0.rss_kb;
     r->rss_after_run_kb  = mr1.rss_kb;
@@ -133,9 +133,9 @@ static void run_boost(BenchResult* r, std::size_t N, int ITERS) {
     for (std::size_t i = 0; i < 16; ++i)
         if (buf[i] != 2.0f) { r->result_ok = 0; break; }
 
-    MemSnapshot mf0 = read_mem();
+    MememorySnapshot mf0 = read_mem();
     boost::alignment::aligned_free(buf);
-    MemSnapshot mf1 = read_mem();
+    MememorySnapshot mf1 = read_mem();
     r->rss_before_free_kb = mf0.rss_kb;
     r->rss_after_free_kb  = mf1.rss_kb;
 }
@@ -147,10 +147,10 @@ static void run_rust(BenchResult* r, std::size_t N, int ITERS) {
 
     const std::size_t ALIGN = 32;
 
-    MemSnapshot mb = read_mem();
+    MememorySnapshot mb = read_mem();
     AlignedBufferF32* rbuf = aligned_buffer_create(N, 1.0f);
     if (!rbuf) { fprintf(stderr, "rust alloc failed\n"); exit(1); }
-    MemSnapshot ma = read_mem();
+    MememorySnapshot ma = read_mem();
 
     r->rss_before_alloc_kb  = mb.rss_kb;
     r->rss_after_alloc_kb   = ma.rss_kb;
@@ -164,7 +164,7 @@ static void run_rust(BenchResult* r, std::size_t N, int ITERS) {
     // warm-up
     aligned_buffer_double_avx(rbuf);
 
-    MemSnapshot mr0 = read_mem();
+    MememorySnapshot mr0 = read_mem();
     double t0 = now_sec();
     for (int it = 0; it < ITERS; ++it) {
         float* p = aligned_buffer_as_mut_ptr(rbuf);
@@ -172,7 +172,7 @@ static void run_rust(BenchResult* r, std::size_t N, int ITERS) {
         aligned_buffer_double_avx(rbuf);
     }
     double t1 = now_sec();
-    MemSnapshot mr1 = read_mem();
+    MememorySnapshot mr1 = read_mem();
 
     r->rss_before_run_kb = mr0.rss_kb;
     r->rss_after_run_kb  = mr1.rss_kb;
@@ -185,9 +185,9 @@ static void run_rust(BenchResult* r, std::size_t N, int ITERS) {
     for (std::size_t i = 0; i < 16; ++i)
         if (rptr[i] != 2.0f) { r->result_ok = 0; break; }
 
-    MemSnapshot mf0 = read_mem();
+    MememorySnapshot mf0 = read_mem();
     aligned_buffer_destroy(rbuf);
-    MemSnapshot mf1 = read_mem();
+    MememorySnapshot mf1 = read_mem();
     r->rss_before_free_kb = mf0.rss_kb;
     r->rss_after_free_kb  = mf1.rss_kb;
 }

@@ -1,94 +1,70 @@
 # boostinrust
 
-# Report 17-05-2026
+Rust reimplementations of selected Boost components, with C++ interoperability and benchmark-driven validation.
 
-## Commands
+The repository currently contains two independent Rust crates:
 
-To build the Rust library:
-
-`cargo build --release`
-
-To build the test example in C++:
-`g++ -std=c++03 -O2 -mavx main.cpp     -Itests/include     -I/usr/include/boost     -Ltarget/release     -lalign     -lpthread -ldl     -o bench && ./bench`
-
----
-
-## Benchmark Report
-**Boost.Align (C++ AVX)** vs **Rust AlignedBuffer (Rust AVX)**
-
-**Buffer:** 16,777,216 floats (64 MB) | **Iterations:** 50
-
----
-
-### Implementation
-
-| | Boost.Align | Rust AlignedBuffer |
+| Crate | Purpose | Documentation |
 |---|---|---|
-| Allocator | `boost::alignment::aligned_alloc` | `Rust AlignedBuffer<f32>` (Box + alloc) |
-| AVX kernel | C++ AVX (`_mm256_mul_ps`) | Rust AVX (`aligned_buffer_double_avx`) |
+| `align` | 32-byte-aligned buffers and AVX operations | [align/README.md](align/README.md) |
+| `endian` | Endian conversion, buffer, and arithmetic types | [endian/README.md](endian/README.md) |
 
----
+Each crate has its own `Cargo.toml`, build script, C++ example, tests, and benchmark notes. Run Cargo commands from the crate directory you are working on.
 
-### Correctness
+## Prerequisites
 
-| Check | Boost.Align | Rust AlignedBuffer |
-|---|---|---|
-| Result | ✅ PASS | ✅ PASS |
-| 32-byte alignment | OK (rem=0) | OK (rem=0) |
+- Rust toolchain with Cargo.
+- A C++ compiler with C++11 support.
+- Boost headers, including Boost.Align, for the `align` C++ comparisons.
+- An AVX-capable CPU for the align examples and benchmarks.
 
----
+The `endian` crate builds its C++ bridge with the `cxx-build` dependency during `cargo build`.
 
-### Timing
+## Repository layout
 
-| Metric | Boost.Align | Rust AlignedBuffer | Winner |
-|---|---|---|---|
-| Total time | 1.0839s | 1.0351s | ⬅ Rust |
-| Per-iteration | 21.6782ms | 20.7014ms | ⬅ Rust |
-| Throughput | 6.19 GB/s | 6.48 GB/s | ⬅ Rust |
+- `align/` - Boost.Align-inspired allocation and SIMD experiments.
+- `endian/` - Boost.Endian-inspired Rust implementation exposed to C++ through `cxx`.
+- `MESCCFilipeFerreiraDissertation/` - dissertation sources and generated thesis material.
+- `benchmarktests.md` - possible extensions to the benchmark suite.
+- `endian_comparison.md` - comparison notes for the endian implementation.
 
-> **Speed ratio (Boost / Rust):** 1.047x — Rust is **4.7% faster**
+## Design goals
 
----
+- Preserve the relevant behavior and correctness guarantees of the Boost APIs.
+- Use Rust ownership and type-safety where they improve the implementation.
+- Keep C++ integration explicit and reproducible.
+- Support performance comparisons with native C++ baselines.
 
-### Memory — Allocation
+## Quick start
 
-| Metric | Boost.Align | Rust AlignedBuffer | Winner |
-|---|---|---|---|
-| RSS delta | +196 KB | +65,540 KB | ⬅ Boost |
-| Virtual delta | +65,540 KB | +65,540 KB | ~ TIE |
+```bash
+cd align
+cargo test --lib
+cargo build --release
+g++ -std=c++03 -O2 -mavx main.cpp \
+	-Itests/include -I/usr/include/boost -Ltarget/release \
+	-lalign -lpthread -ldl -o bench
+./bench
 
----
+cd ../endian
+cargo test
+cargo build --release
+g++ -std=c++11 -O2 main.cpp \
+	-I target/cxxbridge -L target/release \
+	-l endian -l endian_bridge -lpthread -ldl -o endian_demo
+./endian_demo
+```
 
-### Memory — During Run
+For the FFI benchmark commands and troubleshooting notes, see the linked README files above.
 
-| Metric | Boost.Align | Rust AlignedBuffer |
-|---|---|---|
-| RSS delta (run) | +64 KB | +0 KB |
+## Thesis Material
 
-> Near-zero expected — pages committed during warm-up.
+The `MESCCFilipeFerreiraDissertation` folder contains the LaTeX sources for the thesis and related report material supporting this work.
 
----
+## Scope
 
-### Memory — Deallocation
+This is not a line-by-line translation of Boost. It is a Rust-native reinterpretation of selected components for systems programming research, C++ integration, and maintainable production experiments.
 
-| Metric | Boost.Align | Rust AlignedBuffer |
-|---|---|---|
-| RSS delta (free) | -65,540 KB | -65,540 KB |
-| Pages returned to OS | Yes (munmap) | Yes (munmap) |
+## License
 
----
-
-### Summary
-
-| Metric | Boost.Align | Rust AlignedBuffer |
-|---|---|---|
-| Allocator | Boost | Rust |
-| AVX kernel | C++ (`_mm256_mul_ps`) | Rust (FFI) |
-| Correctness | ✅ PASS | ✅ PASS |
-| 32-byte alignment | OK | OK |
-| Avg iteration time | 21.6782 ms | 20.7014 ms |
-| Throughput | 6.19 GB/s | 6.48 GB/s |
-| RSS on alloc | +196 KB | +65,540 KB |
-| Memory returned on free | Yes (munmap) | Yes (munmap) |
-
-> **Overall speed ratio (Boost/Rust):** 1.047x — Rust wins on throughput, Boost wins on RSS footprint.
+License information has not yet been added.
