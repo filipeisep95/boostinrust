@@ -1,0 +1,735 @@
+\chapter{Implementation of the Migration Strategy}
+\label{chap:Chapter7}
+
+\section{ImplementationOverview}
+
+This chapter presents the implementation of the Boost to Rust migration described in the previous chapters.
+The implementation focuses on two selected Boost libraries, namely \texttt{Boost.Align} and \texttt{Boost.Endian},
+which were selected due to their low level nature, 
+relevance to systems programming and suitable for evaluating the migration methodology. 
+
+The implementation translates the relevant functionality of the original C++ libraries into Rust, 
+while avoiding a direct syntactic translation of the original source code.
+Instead, the Rust implementation uses Rust's ownership model, type system and stadard library facilities where these
+provide suitable abstractions for the original C++ functionality.
+
+The implementation is evaluated with respect to foir main objectives: functional equivalence, memory safety,
+interoperability with existing C++ software and suitability for automotive systems software.
+
+The implementation follows the migration strategy described in Chapter \ref{chap:Chapter5}.
+For each library, the original functionality is first mapped to Rust abstractions, follower by the implementation 
+of the selected functionality and its associated tests. Where interoperability is required, a C++ interface 
+is introduced around the Rust implementation, which is then tested through benchmark tests.
+
+\section{Implementation Environment}
+
+The implementation was developed in the \texttt{boostinrust} repository, which provides the experimental environment 
+for evaluating the migration of selected Boost libraries to Rust. The implementation focuses on \texttt{Boost.Align} 
+and \texttt{Boost.Endian}, selected as representative examples of low level systems functionality involving 
+memory alignment and binary data representation. 
+
+The Rust implementation was developed using Rust version 1.93. The development environment includes the Rust compiler
+(\texttt{rustc}), Cargo and the LLVM/Clang based tooling provided with the Rust toolchain. In particular, 
+the environment contains the Rust compiler and the associated \texttt{rust-clang}, \texttt{rust-lld}, 
+\texttt{rust-llvm-dwp}, and \texttt{rustdoc} components. The use of the LLVM/Clang toolchain is relevant to the low-level 
+nature of the selected libraries and provides the compiler infrastructure required for building and 
+inspecting the resulting Rust implementation.
+
+The original Boost implementations are used as the reference implementations for the migration. This allows the Rust 
+implementation to be evaluated against the functionality and observable behavior of the original C++ corresponding libraries.
+The approach follows the migration strategy described in Chapter \ref{chap:Chapter5}, in which the functionality and dependencies
+of the original library are first analyzed before equivalent Rust abstractions are defined and implemented. 
+The resulting Rust implementation is then tested and evaluated against the original C++ library to ensure functional equivalence,
+memory safety, interoperability and suitability for automotive systems software.
+
+The implementation does not attempt to reproduce the interal structure of the C++ implementation directly. Instead, Rust specific
+mechanisms are used where they provide a more appropriate representation of the original functionality. This includes Rust's ownership
+and borrowing model, type system and standard library facilities for memory layout and byte order operations.
+This distinction is particularly relevant for the selected libraries. Boost.Align requires operations involving memory alignment, 
+allocation and pointer manipulation, while Boost.Endian requires explicit control over the byte representation and byte order of stored values.
+
+The implementation is structured to support functional verification through tests. 
+The behavior of the Rust implementation is evaluated against the expected behavior of the corresponding Boost functionality, 
+with particular attention given to boundary conditions and low-level memory operations.
+This follows the development plan established in Chapter~4, where functional equivalence is verified through 
+unit testing and interface-level validation.
+
+A specific concern of the implementation environment is the use of \texttt{unsafe} Rust. 
+Although Rust provides alignment and memory-safety guarantees through its type system, 
+reproducing some low-level Boost functionality requires operations involving raw pointers or manually allocated memory. 
+uch operations are therefore isolated and minimized in the implementation. This follows the migration strategy's requirement to
+preserve Rust's safety guarantees while restricting unsafe operations to well-defined boundaries.
+
+Table~\ref{tab:implementation_environment} summarizes the main tools and
+versions used during the implementation.
+
+
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{|l|l|}
+        \hline
+        \textbf{Component} & \textbf{Version / Configuration} \\ \hline
+        Rust & 1.93 \\ \hline
+        Rust compiler & \texttt{rustc 1.93} \\ \hline
+        Documentation & \texttt{rustdoc 1.93} \\ \hline
+        Compiler infrastructure & LLVM / Clang \\ \hline
+        Linker & \texttt{rust-lld} \\ \hline
+        Reference implementation & Boost 1.91.0 \\ \hline
+    \end{tabular}
+    \caption{Implementation environment}
+    \label{tab:implementation_environment}
+\end{table}
+
+The resulting environment provides a controlled basis for implementing and evaluating the selected libraries. 
+It combines the original Boost implementations used as behavioral references with a contemporary Rust
+toolchain, allowing the migration to be evaluated while preserving the low-level characteristics relevant to systems programming.
+
+
+\section{Boost.Align Reimplementation}
+
+The reimplementation of Boost.Align focuses on the memory-alignment functionality required by the selected use case.
+Rather than reproducing the complete Boost.Align API, the implementation provides a Rust-native abstraction for creating 
+and manipulating 32-byte-aligned data and exposes the relevant functionality through a C-compatible interface.
+
+The implementation is located in the align component of the project. 
+Its central abstraction is AlignedBuffer, which stores floating-point data in an alignment-aware representation suitable for SIMD processing. 
+The implementation additionally provides an \lstinline|aligned_type!| macro for defining aligned Rust types 
+and an AVX-specific processing function for operating on aligned buffers.
+
+This approach follows the migration strategy described in Chapter 5: the objective is not to reproduce the original C++ implementation internally, 
+but to preserve the relevant observable behaviour while using Rust's type system, ownership model and memory-management mechanisms. 
+In particular, the implementation uses Rust's \lstinline|#[repr(align(...))]| attribute and Vec allocation rather than 
+implementing a separate low-level aligned allocator.
+
+\subsection{Scope and API mapping}
+
+The Boost.Align library provides several facilities related to memory alignment, including aligned allocation and deallocation, 
+pointer alignment, alignment inspection and aligned allocators. For the implementation developed in this project, 
+only a subset of this functionality was required.
+
+The Rust implementation therefore maps the relevant alignment requirements to Rust language 
+and standard-library mechanisms rather than attempting to reproduce the complete Boost.Align API.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|l|p{7cm}|}
+\hline
+\textbf{Boost.Align concept} & \textbf{Rust implementation} & \textbf{Purpose} \\ \hline
+
+Aligned storage
+& \lstinline|#[repr(align(32))]|
+& Establishes a compile-time alignment requirement \\ \hline
+
+Aligned type
+& \lstinline|Aligned<T>|
+& Provides a generic 32-byte-aligned wrapper \\ \hline
+
+User-defined aligned type
+& \lstinline|aligned_type!|
+& Generates types with a configurable alignment \\ \hline
+
+Aligned memory buffer
+& \lstinline|AlignedBuffer|
+& Stores aligned \texttt{f32} data \\ \hline
+
+Aligned allocation
+& \lstinline|Vec<F32x8>|
+& Uses Rust's allocator with the alignment of \lstinline|F32x8| \\ \hline
+
+Pointer access
+& \lstinline|as_ptr()| / \lstinline|as_mut_ptr()|
+& Provides raw-pointer access for SIMD and FFI \\ \hline
+
+Alignment-dependent processing
+& \lstinline|double_f32_avx()|
+& Performs AVX operations on aligned memory \\ \hline
+
+C++ interoperability
+& \lstinline|ffi| module
+& Exposes the buffer and SIMD operations through C ABI functions \\ \hline
+
+\end{tabular}
+\caption{Mapping of Boost.Align concepts to the Rust implementation}
+\label{tab:boost-align-rust-mapping}
+\end{table}
+
+
+This represents a deliberate reduction of the original API surface. 
+In particular, the current implementation does not provide direct Rust equivalents of all Boost.Align functions such as 
+align\_up, align\_down, is\_aligned, aligned\_alloc, aligned\_free, or aligned\_allocator. 
+Instead, alignment is established structurally through the type definition of the stored elements.
+
+This distinction is important because the objective of the implementation is to investigate whether the relevant alignment guarantees 
+can be expressed more directly using Rust's type system rather than reproducing Boost's low-level allocation interface.
+
+
+\newpage
+\subsection{Alignment representation}
+
+The central design decision in the Rust implementation is to represent alignment as a type-level property.
+
+The implementation defines:
+
+\begin{lstlisting}[
+    style=rustblock,
+    aboveskip=0.5\baselineskip,
+    belowskip=0.5\baselineskip
+]
+#[repr(align(32))]
+pub struct Aligned<T>(pub T);
+\end{lstlisting}
+
+The implementation defines:
+
+\begin{lstlisting}[style=rustblock]
+#[repr(align(32))]
+pub struct Aligned<T>(pub T);
+\end{lstlisting}
+
+The \lstinline|#[repr(align(32))]| attribute requires instances of
+\lstinline|Aligned<T>| to have an alignment of at least 32 bytes.
+The wrapper implements \lstinline|Deref| and \lstinline|DerefMut|,
+allowing access to the contained value without requiring callers to
+manipulate the wrapper explicitly.
+
+A second mechanism is provided through the
+\lstinline|aligned_type!| macro, which can be invoked as
+\lstinline|aligned_type!(AlignedF32x32, f32, 32)|. 
+
+The macro generates a structure equivalent to:
+
+\begin{lstlisting}[style=rustblock]
+#[repr(align($align))]
+pub struct $name(pub $inner_type);
+\end{lstlisting}
+
+This provides a convenient mechanism for defining aligned types while keeping the alignment requirement 
+explicit at the type definition.
+
+The implementation moves an important part of th alignment responsibility from runtime allocation logic to 
+the Rust type system.
+Instead of allocating and arbitrary block of memory and subsequently determine the returned pointer satisfies an alignment
+requirement, the type of the element carries the required alignment.
+
+The buffer implementation applies the same principle through the
+internal \lstinline|F32x8| type:
+
+\begin{lstlisting}[style=rustblock]
+#[repr(align(32))]
+struct F32x8([f32; 8]);
+\end{lstlisting}
+
+The \lstinline|F32x8| type represents eight \lstinline|f32| values,
+corresponding to a 256-bit AVX register. The
+\lstinline|#[repr(align(32))]| attribute requires instances of
+\lstinline|F32x8| to have an alignment of at least 32 bytes.
+Consequently, a \lstinline|Vec<F32x8>| allocation is required to satisfy
+this alignment requirement.
+
+The \lstinline|F32x8| type represents eight \lstinline|f32| values,
+corresponding to a 256-bit AVX register. Since the type has an alignment
+requirement of 32 bytes, a \lstinline|Vec<F32x8>| allocation is required
+to satisfy this alignment.
+
+Consequently, the alignment requirement is established by the type of
+the allocation rather than by manually adjusting an address returned
+from a general-purpose allocation.
+
+The logical length of the buffer is maintained separately:
+
+\begin{lstlisting}[style=rustblock]
+pub struct AlignedBuffer {
+data: Vec<F32x8>,
+len: usize,
+}
+\end{lstlisting}
+
+Here, \lstinline|data| contains the physically allocated and aligned
+storage, while \lstinline|len| records the number of logical
+\lstinline|f32| elements stored in the buffer.
+
+The constructor explicitly restricts the buffer size to multiples of
+eight:
+
+\begin{lstlisting}[style=rustblock]
+assert!(size % 8 == 0,
+"AlignedBuffer size must be a multiple of 8");
+\end{lstlisting}
+
+This restriction ensures that the logical buffer consists exclusively
+of complete \lstinline|F32x8| blocks. It also establishes the condition
+required by the AVX implementation, which processes eight
+\lstinline|f32| values per iteration.
+
+The implementation enforces two constraints:
+
+\begin{enumerate}
+\item the underlying storage has an alignment of 32 bytes; and
+\item the number of logical \lstinline|f32| elements is a multiple of eight.
+\end{enumerate}
+
+Together, these properties ensure that the buffer can be safely used
+with aligned AVX load and store operations, with each operation
+processing a complete group of eight \lstinline|f32| values.
+
+This approach establishes the alignment requirement through the type of
+the allocation itself, rather than by manually adjusting an address
+returned by a general-purpose allocation. The alignment constraint is
+therefore expressed as part of the type definition, allowing the Rust
+allocator and collection types to preserve the required alignment
+without requiring explicit pointer manipulation by the caller.
+
+
+\newpage
+\subsection{Aligned Memory Allocation}
+
+Differenf from original Boost.Align interface, the Rust implementation does
+not explicitly expose a general purpose \lstinline|aligned_alloc|/
+\lstinline|aligned_free| pair. Instead, aligned storage is obtained
+indirectly through the Rust \lstinline|Vec| abstraction.
+
+The relevant type definition is:
+
+\begin{lstlisting}[style=rustblock]
+#[repr(align(32))]
+struct F32x8([f32; 8]);
+\end{lstlisting}
+
+The aligned elements are then stored in the \lstinline|AlignedBuffer|
+structure:
+
+\begin{lstlisting}[style=rustblock]
+pub struct AlignedBuffer {
+data: Vec<F32x8>,
+len: usize,
+}
+\end{lstlisting}
+
+The constructor creates the vector as follows:
+
+\begin{lstlisting}[style=rustblock]
+data: (0..chunks)
+.map(|_| F32x8([value; 8]))
+.collect(),
+\end{lstlisting}
+
+The important property of this approach is that the allocator operates
+on \lstinline|F32x8| elements rather than directly on
+\lstinline|f32| elements. The alignment requirement of the allocated
+storage is therefore derived from the alignment requirement of
+\lstinline|F32x8|. This allows the alignment constraint to be expressed
+through the type rather than being supplied explicitly as an argument
+to the allocation operation.
+
+This represents a significant difference from the Boost.Align
+implementation. Boost.Align exposes allocation as an explicit operation
+in which the caller specifies both the requested size and alignment.
+The Rust implementation, in contrast, encodes the alignment requirement
+into the type being allocated and relies on the standard
+\lstinline|Vec| abstraction to manage the resulting storage.
+
+The ownership model is also substantially different. The
+\lstinline|AlignedBuffer| owns its \lstinline|Vec<F32x8>|, and the
+allocated storage is automatically released when the
+\lstinline|AlignedBuffer| is dropped. Consequently, normal Rust usage
+does not require an explicit deallocation function or require the caller
+to pair an allocation with a corresponding
+\lstinline|aligned_free| operation.
+
+This ownership-based approach eliminates an important class of manual
+memory-management operations present in the C++ interface. Resource
+lifetime is instead tied to the lifetime of the owning Rust value, with
+deallocation performed automatically according to Rust's ownership and
+drop semantics.
+
+An explicit destruction function is retained only for the
+C compatible interface, where manual lifetime management is required to
+interoperate with external code. This distinction allows the native
+Rust API to remain idiomatic while still providing the necessary
+lifecycle operations for the interoperability layer described later.
+
+\newpage
+\subsection{Pointer Alignment}
+
+Although the storage is represented using an aligned type, the
+implementation provides raw-pointer access through the following
+methods:
+
+\begin{lstlisting}[style=rustblock]
+pub fn as_ptr(&self) -> *const f32 {
+self.data.as_ptr() as *const f32
+}
+
+pub fn as_mut_ptr(&mut self) -> *mut f32 {
+self.data.as_mut_ptr() as *mut f32
+}
+\end{lstlisting}
+
+This functionality is required because the SIMD implementation operates
+directly on raw pointers. The AVX operation is defined as follows:
+
+\begin{lstlisting}[style=rustblock]
+#[target_feature(enable = "avx")]
+pub unsafe fn double_f32_avx(ptr: *mut f32, len: usize)
+\end{lstlisting}
+
+The implementation processes eight elements per iteration:
+
+\begin{lstlisting}[style=rustblock]
+for i in (0..len).step_by(8) {
+let v = _mm256_load_ps(ptr.add(i));
+let result = _mm256_add_ps(v, v);
+_mm256_store_ps(ptr.add(i), result);
+}
+\end{lstlisting}
+
+The \lstinline|_mm256_load_ps| and \lstinline|_mm256_store_ps|
+operations require appropriately aligned memory. Consequently, the
+caller of \lstinline|double_f32_avx| must satisfy three requirements:
+
+\begin{itemize}
+\item the pointer must be aligned to 32 bytes;
+\item the length must be a multiple of eight; and
+\item the complete memory range must be valid and exclusively accessible
+for the duration of the operation.
+\end{itemize}
+
+The alignment guarantee originates from the
+\lstinline|F32x8| type, while the multiple-of-eight constraint is
+established by the construction of \lstinline|AlignedBuffer|.
+
+The SIMD function nevertheless retains an \lstinline|unsafe| boundary
+because Rust cannot statically verify all safety conditions associated
+with an arbitrary raw pointer supplied by the caller. In particular,
+pointer validity, the size of the accessible memory region, exclusive
+access for mutable operations, and the processor feature required by
+the function cannot all be inferred from the raw-pointer interface.
+
+For the buffer-based FFI function, the implementation additionally
+performs a runtime alignment check before passing the pointer to the AVX
+implementation:
+
+\begin{lstlisting}[style=rustblock]
+assert_eq!(
+slice.as_ptr() as usize % 32,
+0,
+"buffer pointer is not 32-byte aligned: {:p}",
+slice.as_ptr()
+);
+\end{lstlisting}
+
+This assertion provides a runtime sanity check at the FFI boundary,
+where data may originate from code outside the guarantees of the native
+Rust API.
+
+The resulting design combines static guarantees provided by the Rust
+type system with runtime validation at the unsafe and FFI boundaries.
+The aligned storage type establishes the required memory alignment,
+while the buffer abstraction constrains its logical length. Runtime
+checks are then used to validate assumptions that cannot be expressed
+or verified statically when crossing the raw-pointer and FFI
+interfaces.
+
+
+\subsection{Allocator Support}
+
+The original Boost.Align implementation provides dedicated aligned
+allocator abstractions, including \lstinline|aligned_allocator| and
+\lstinline|aligned_allocator_adaptor|. The Rust implementation does
+not reproduce these classes directly. Instead, allocation is delegated
+to Rust's standard \lstinline|Vec| abstraction.
+
+The relevant allocation is a \lstinline|Vec<F32x8>|, where
+\lstinline|F32x8| has a 32-byte alignment requirement:
+
+\begin{lstlisting}[style=rustblock]
+Vec<F32x8>
+\end{lstlisting}
+
+This means that the alignment requirement of the allocated storage is
+derived from the alignment of the type being stored rather than being
+provided as a separate parameter to the allocation operation.
+
+This design provides two advantages for the selected use case. First,
+it avoids introducing a separate custom allocator abstraction merely
+to reproduce the C++ allocator interface. Second, ownership remains
+explicit: \lstinline|AlignedBuffer| owns the vector and therefore owns
+the memory represented by it.
+
+The lifetime of the allocation is consequently tied to the lifetime of
+the \lstinline|AlignedBuffer| object. When the object is dropped, its
+\lstinline|Vec<F32x8>| is also dropped and its allocation is released
+automatically by Rust's memory-management mechanisms.
+
+The implementation therefore replaces the explicit C++ allocation and
+deallocation relationship with Rust's ownership model:
+
+\begin{verbatim}
+Boost.Align:
+aligned_alloc()
+|
+raw pointer
+|
+aligned_free()
+
+Rust:
+AlignedBuffer
+|
+Vec<F32x8>
+|
+automatic Drop
+\end{verbatim}
+
+This is not a one-to-one API translation. Instead, it represents a
+semantic mapping from explicit manual allocation to an
+ownership-based allocation model. For the selected AVX use case, this
+provides the required alignment guarantee without exposing the
+allocation mechanism directly to the caller.
+
+\subsection{Unsafe Code Isolation}
+
+One of the implementation objectives was to restrict unsafe operations
+to the smallest practical part of the implementation. Most of
+\lstinline|AlignedBuffer| is implemented using safe Rust, with
+construction, ownership, length management, and destruction handled
+through standard Rust abstractions.
+
+Unsafe operations are concentrated in three areas.
+
+The first is the conversion from the internally stored
+\lstinline|F32x8| representation to an \lstinline|f32| slice:
+
+\begin{lstlisting}[style=rustblock]
+pub fn as_slice(&self) -> &[f32] {
+unsafe {
+std::slice::from_raw_parts(self.as_ptr(), self.len)
+}
+}
+\end{lstlisting}
+
+and its mutable counterpart:
+
+\begin{lstlisting}[style=rustblock]
+pub fn as_mut_slice(&mut self) -> &mut [f32] {
+unsafe {
+std::slice::from_raw_parts_mut(self.as_mut_ptr(), self.len)
+}
+}
+\end{lstlisting}
+
+These operations require the implementation to guarantee that the
+pointer refers to a valid contiguous range containing at least
+\lstinline|len| initialized \lstinline|f32| values. The safety of these
+operations therefore depends on invariants established by
+\lstinline|AlignedBuffer|.
+
+The second unsafe boundary is the AVX implementation. Raw-pointer
+arithmetic and architecture-specific SIMD intrinsics require explicit
+unsafe operations:
+
+\begin{lstlisting}[style=rustblock]
+let v = _mm256_load_ps(ptr.add(i));
+\end{lstlisting}
+
+The AVX function therefore explicitly documents the safety
+preconditions required by the caller, including pointer alignment,
+validity of the accessed memory range, and the appropriate length.
+
+The third unsafe boundary is the C-compatible interface. For example,
+the destruction function is defined as:
+
+\begin{lstlisting}[style=rustblock]
+pub unsafe extern "C" fn aligned_buffer_destroy(
+buffer: *mut AlignedBuffer
+)
+\end{lstlisting}
+
+The Rust-owned object is reconstructed using:
+
+\begin{lstlisting}[style=rustblock]
+drop(Box::from_raw(buffer));
+\end{lstlisting}
+
+This operation is valid only when the pointer originated from
+\lstinline|Box::into_raw| and has not already been destroyed.
+
+The corresponding FFI construction function establishes this ownership
+relationship:
+
+\begin{lstlisting}[style=rustblock]
+let buffer = Box::new(AlignedBuffer::new(size, value));
+Box::into_raw(buffer)
+\end{lstlisting}
+
+The resulting FFI lifecycle can therefore be represented as:
+
+\begin{verbatim}
+aligned_buffer_create()
+|
+Box<AlignedBuffer>
+|
+Box::into_raw()
+|
+C/C++ owns opaque pointer
+|
+aligned_buffer_destroy()
+|
+Box::from_raw()
+|
+Drop
+\end{verbatim}
+
+This provides an appropriate boundary for isolating unsafe operations,
+as C++ cannot express the ownership guarantees provided by Rust's type
+system. The FFI layer consequently acts as the bridge between the
+externally managed C/C++ representation and the Rust-owned object.
+
+One issue that should nevertheless be acknowledged is the use of
+\lstinline|assert!| in some FFI functions. For example,
+\lstinline|aligned_buffer_len| asserts that its pointer argument is
+non-null. While such assertions are useful for detecting violations
+during development, they are not an ideal error-handling mechanism for
+a production C ABI. In production-oriented automotive integration,
+these assertions would preferably be replaced with explicit error or
+status handling so that failure does not depend on Rust panic behaviour
+at an FFI boundary.
+
+This distinction illustrates the difference between the research
+prototype and a production-ready interoperability layer. The prototype
+uses assertions to detect violated assumptions, while a production
+interface would require a defined error-handling contract suitable for
+the target C/C++ environment.
+
+\subsection{Boost.Align Test Suite}
+
+Validation of the Boost.Align reimplementation was performed at both
+the Rust implementation level and through a C++ benchmark comparing the
+Boost and Rust implementations.
+
+The Rust test suite contains tests covering the fundamental properties
+required by the selected implementation.
+
+The first test verifies the alignment guarantee:
+
+\begin{lstlisting}[style=rustblock]
+#[test]
+fn test_alignment() {
+let buffer = AlignedBuffer::new(
+16,
+AlignedF32x32(1.0)
+);
+
+```
+let buffer_pointer = buffer.as_ptr() as usize;
+
+assert_eq!(buffer_pointer % 32, 0);
+```
+
+}
+\end{lstlisting}
+
+The test explicitly verifies that the address returned by the buffer is
+divisible by 32, thereby validating the fundamental alignment
+requirement of the selected Boost.Align use case.
+
+The second test validates the AVX processing path:
+
+\begin{lstlisting}[style=rustblock]
+#[test]
+fn test_simd() {
+let mut buffer =
+AlignedBuffer::new(16, AlignedF32x32(1.0));
+
+```
+unsafe {
+    let buffer_pointer =
+        buffer.as_mut_ptr() as *mut f32;
+
+    aligned_buffer::simd::double_f32_avx(
+        buffer_pointer,
+        buffer.len()
+    );
+}
+
+for v in buffer.as_slice() {
+    assert_eq!(*v, 2.0);
+}
+```
+
+}
+\end{lstlisting}
+
+This test simultaneously exercises aligned allocation, raw-pointer
+conversion, and SIMD processing. The initial value is \lstinline|1.0|,
+and the AVX operation doubles every element, resulting in an expected
+value of \lstinline|2.0| for each element.
+
+In addition to the Rust tests, the project contains a C++ benchmark
+driver comparing the Boost.Align and Rust implementations using the
+same general workload. The benchmark allocates a buffer containing
+\lstinline|2^{24}| \lstinline|float| values, corresponding to
+approximately 64~MiB of data, and performs 50 processing iterations
+using 32-byte aligned storage.
+
+The Boost implementation uses:
+
+\begin{lstlisting}[style=cppblock]
+boost::alignment::aligned_alloc(ALIGN,
+N * sizeof(float));
+\end{lstlisting}
+
+whereas the Rust implementation uses the \lstinline|AlignedBuffer|
+abstraction.
+
+Both implementations verify the 32-byte alignment of their allocated
+buffers and process the data using AVX operations. The benchmark
+additionally measures execution time, throughput, resident memory
+usage, and memory behaviour during deallocation.
+
+The recorded benchmark results show successful correctness and
+alignment checks for both implementations. The reported average
+iteration time was approximately 21.68~ms for Boost.Align and
+20.70~ms for the Rust implementation, corresponding to reported
+throughputs of approximately 6.19~GB/s and 6.48~GB/s, respectively.
+The resulting Boost-to-Rust execution-time ratio was approximately
+1.047, with the Rust implementation achieving the higher measured
+throughput in this experiment.
+
+The memory measurements showed different behaviour. The reported RSS
+increase during allocation was approximately 196~KB for the Boost
+implementation and 65,540~KB for the Rust implementation, while both
+implementations subsequently showed approximately 65,540~KB of RSS
+reduction during deallocation.
+
+These results should not be interpreted as a general performance
+advantage of Rust over Boost.Align. The benchmark evaluates a specific
+64~MiB workload, allocator configuration, AVX processing path, and
+experimental environment. Furthermore, the two SIMD kernels are not
+implemented identically at the instruction level: the C++ benchmark
+uses \lstinline|_mm256_mul_ps| with a vector containing
+\lstinline|2.0f|, whereas the Rust implementation uses
+\lstinline|_mm256_add_ps(v, v)|. Although both operations produce the
+same mathematical result for the tested input, they represent
+different instructions and may have different performance
+characteristics.
+
+Consequently, the benchmark primarily demonstrates that the Rust
+implementation can provide the required alignment and SIMD
+functionality with comparable performance under the tested workload.
+The results do not establish a general performance superiority of
+either implementation.
+
+Overall, the tests demonstrate the principal objectives of the
+Boost.Align reimplementation. Aligned storage can be expressed through
+Rust's type system, the resulting buffer can participate in an
+ownership-based memory model, and the aligned memory can be exposed to
+low-level SIMD operations and C++ through a narrowly defined
+unsafe/FFI boundary. This provides the required functionality for the
+selected use case while avoiding a direct reproduction of the original
+Boost allocation API.
+
+
+

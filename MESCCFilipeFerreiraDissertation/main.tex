@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % DMECS Dissertation
 % LaTeX Template
-% Version 0.4 (Nov/2025)
+% Version 0.5 (Jan 2026)
 %
 % Adapted to MESCC/ISEP by
 % Luis Miguel Pinho (lmp@isep.ipp.pt) and
@@ -71,6 +71,29 @@
 
 \usepackage{tabularx}
 
+\usepackage{listings}
+
+\lstdefinestyle{rustblock}{
+    language=Rust,
+    basicstyle=\ttfamily\small,
+    frame=none,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    breaklines=true
+}
+
+\lstdefinestyle{cppblock}{
+    language=C++,
+    basicstyle=\ttfamily\small,
+    numbers=left,
+    numberstyle=\tiny,
+    frame=single,
+    breaklines=true,
+    breakatwhitespace=false,
+    columns=fullflexible
+}
+
 \addbibresource{mainbibliography.bib} % The filename of the bibliography
 
 \makeglossaries % build the glossary
@@ -94,7 +117,6 @@
 
 %\committeepresident{Full Name, Category, Affiliation} % Name of the president of the evaluation committee, print it elsewhere with \presidentname
 
-% \committeepresident{}
 
 % \committeemembers{}
 
@@ -133,7 +155,9 @@
 \input{ch2/chapter2}
 \input{ch3/chapter3}
 \input{ch4/chapter4}
-%\input{ch5/chapter5}
+\input{ch5/chapter5}
+\input{ch6/chapter6}
+\input{ch7/chapter7}
 
 
 %----------------------------------------------------------------------------------------

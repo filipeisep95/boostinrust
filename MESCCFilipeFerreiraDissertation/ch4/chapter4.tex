@@ -158,23 +158,59 @@ and auditable.
 
 \section{Development Timeline}
 
-Table \ref{tab:development_gantt} presents a Gantt-style overview of the
-development plan covering the February–July period.
+Table \ref{tab:development_gantt} presents a Gantt-style overview of
+the development plan covering the February--September period. The
+activities are intentionally overlapping to reflect the iterative
+nature of the migration process.
 
+\begin{table}[H]
 
-\begin{table}[ht!]
 \centering
+
 \renewcommand{\arraystretch}{1.3}
-\begin{tabular}{|l|c|c|c|c|c|c|}
+
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|}
+
 \hline
-\textbf{Activity / Month} & \textbf{Feb} & \textbf{Mar} & \textbf{Apr} & \textbf{May} & \textbf{Jun} & \textbf{Jul} \\ \hline
-System Analysis and Boost Selection      & X &   &   &   &   &   \\ \hline
-Architectural Refactoring &   & X &   &   &   &   \\ \hline
-Rust Reimplementation     &   &   & X &   &   &   \\ \hline
-Bidirectional \gls{FFI} Integration            &   &   &   & X &   &   \\ \hline
-Validation and Safety Analysis           &   &   &   &   & X &   \\ \hline
-Consolidation and Documentation          &   &   &   &   &   & X \\ \hline
+
+\textbf{Activity / Month} &
+\textbf{Feb} &
+\textbf{Mar} &
+\textbf{Apr} &
+\textbf{May} &
+\textbf{Jun} &
+\textbf{Jul} &
+\textbf{Aug} &
+\textbf{Sep} \\ \hline
+
+System Analysis and Boost Selection
+    & X & X &   &   &   &   &   &   \\ \hline
+
+Architectural Refactoring and Interface Design
+    &   & X & X &   &   &   &   &   \\ \hline
+
+Rust Reimplementation
+    &   &   & X & X &   &   &   &   \\ \hline
+
+Bidirectional \gls{FFI} Integration
+    &   &   &   & X & X &   &   &   \\ \hline
+
+Validation and Safety Analysis
+    &   &   &   &   & X & X & X &   \\ \hline
+
+Performance Evaluation and Optimization
+    &   &   &   &   &   & X & X &   \\ \hline
+
+Consolidation and Documentation
+    &   &   &   &   &   &   & X & X \\ \hline
+
+Final Evaluation and Reporting
+    &   &   &   &   &   &   &   & X \\ \hline
+
 \end{tabular}
+
 \caption{Gantt-style development plan for the Boost-to-Rust migration}
+
 \label{tab:development_gantt}
+
 \end{table}
