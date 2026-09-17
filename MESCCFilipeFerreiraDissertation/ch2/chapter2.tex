@@ -472,6 +472,47 @@ Unfortunately, beside this, C++ code remains 100\% unsafe.
 AutoCxx is a tool for calling C++ from Rust in a heavily automated form. It includes all fluent safety from Cxx generating
 interfaces automatically from C++ headers using a variant of \textbf{bindgen}.
 
+\subsection{Evaluation Criteria for Interoperability Mechanisms}
+\label{sec:ffi_evaluation_criteria}
+
+The interoperability mechanisms discussed above are not equivalent and should not be selected solely on the basis of whether they can technically connect Rust and C++. For an incremental migration of legacy Boost components, the mechanism must also satisfy constraints imposed by the existing C++ standard, the desired safety boundary, the target platforms, the build system, and the complexity of the exposed interface.
+
+The following criteria are therefore used to compare the mechanisms considered in this dissertation:
+
+\begin{itemize}
+    \item \textbf{C++ compatibility}: the minimum C++ language standard required by the interoperability mechanism and its ability to integrate with legacy C++03 code.
+    \item \textbf{Safety}: the extent to which the mechanism can express interface contracts and reduce manually written FFI code, without assuming that the C++ implementation itself is memory-safe.
+    \item \textbf{Portability}: dependencies on compiler versions, platforms, language standards, and generated artifacts.
+    \item \textbf{Performance}: expected runtime and call-boundary overhead and the ability to expose low-level operations without unnecessary conversions.
+    \item \textbf{ABI stability}: dependence on a C++ ABI versus a stable C-compatible boundary.
+    \item \textbf{Template support}: ability to represent or wrap generic and template-heavy Boost interfaces.
+    \item \textbf{Build complexity}: additional generators, headers, build-script integration, and maintenance requirements.
+    \item \textbf{Auditability}: the ease with which the externally visible interface, ownership rules, and unsafe assumptions can be inspected and documented.
+\end{itemize}
+
+Table~\ref{tab:ffi_mechanism_comparison} summarizes the assessment. The values are qualitative suitability assessments for the migration scenario considered in this dissertation; they are not universal rankings of the technologies.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{|l|c|c|c|c|c|}
+\hline
+\textbf{Criterion} & \textbf{C ABI} & \textbf{cxx} & \textbf{bindgen} & \textbf{autocxx} & \textbf{cbindgen} \\ \hline
+C++03 compatibility & High & Low & High & Low & High \\ \hline
+Safety / interface checking & Medium & High & Medium & High & High \\ \hline
+Portability & High & Medium & Medium & Medium & High \\ \hline
+Performance transparency & High & High & High & Medium & High \\ \hline
+ABI stability & High & Medium & Medium & Medium & High \\ \hline
+Template-heavy C++ support & Low & Medium & High & High & N/A \\ \hline
+Build complexity & Low & Medium & Medium & High & Low \\ \hline
+Auditability & High & Medium & Medium & Medium & High \\ \hline
+\end{tabularx}
+\caption{Qualitative comparison of Rust/C++ interoperability mechanisms for the migration scenario}
+\label{tab:ffi_mechanism_comparison}
+\end{table}
+
+The comparison highlights an important methodological point: there is no single interoperability mechanism that is optimal for every Boost component. A small C-compatible interface is attractive when legacy C++03 compatibility and ABI stability dominate the requirements, whereas a higher-level bridge may provide more expressive interfaces when the C++ baseline permits it. This distinction is directly relevant to the two case studies: Boost.Align targets a C++03-compatible boundary, while the selected Boost.Endian integration uses \texttt{cxx} and therefore has a different compatibility envelope.
+
 \subsection{Boost migration for Rust}
 Currently there is no official migration of Boost from C++ to Rust.
 Both ecosystems, C++ and Rust, are designed within different paradigms. Boost is described as a peer reviewed open source
@@ -490,8 +531,7 @@ completely different approach. Those Rust rules are used to avoid the overhead o
 
 There is an entry at Crates.io for porting Boost libraries to Rust but there is no updates since 2021. 
 At this moment has no source code \parencite{boosters_crate}.
-On other side, there are some Rust native equivalents to Boost C++ at Crates.io that are safer and faster. 
-At the following table is possible to check some equivalents \parencite{crates_io}.
+There are also Rust-native alternatives to several Boost libraries available through the Rust ecosystem. The following table provides examples of such alternatives \parencite{crates_io}.
 
 \begin{table}[H]
     \centering

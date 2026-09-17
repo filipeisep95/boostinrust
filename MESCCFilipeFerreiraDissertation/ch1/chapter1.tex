@@ -1,7 +1,7 @@
 % Chapter 1
 % 
 \chapter{Introduction} % Main chapter title
-\label{chap:Chapter1} % For referencing the chapter elsewhere, use Chapter~\ref{Chapter1}
+\label{chap:Chapter1} % For referencing the chapter elsewhere, use Chapter~\ref{chap:Chapter1}
 
 
 %-------------------------------------------------------------------------------
@@ -25,7 +25,7 @@ where a minor software defect can lead to serious consequences \parencite{AUTOSA
 Rust has rapidly emerged as a plausible successor for safety-critical software. 
 Enforcing memory safety, ownerhip and data race free concurrency at compile time \parencite{docs_rs}. 
 Rust promises to drastically reduce classes of defects edemic to C/C++ systems \parencite{ProgrammingRust}. 
-Rust achieves this without introducing garbage collection, retaining the predictability required for real-time environments \parencite{docs_rs}.
+Rust achieves this without introducing garbage collection, which can support predictable resource management in systems with real-time requirements \parencite{docs_rs}.
 
 Despite the advantages Rust presents, the transition from C++ to Rust in large industrial ecosystems remains complex. 
 Automotive software contains millions of lines of validated legacy C++ code. 
@@ -44,7 +44,7 @@ that are deeply coupled with the C++ ecosystem and reliant on complex, template-
 
 
 \section{Problem Statement} 
-\label{sec:problem_statement} %For referencing this section elsewhere, use Section~\ref{sec:chap1_introduction}
+\label{sec:problem_statement} %For referencing this section elsewhere, use Section~\ref{sec:problem_statement}
 
 The central results from the tension between two different realities:
 \begin{enumerate}
@@ -61,7 +61,7 @@ As result of this limitation:
     \item The integration often requires unsafe code, reducing Rust's safety benefits.
     \item Interfacing with templaty heavily libraries, as Boost.Geometry and Boost.Asio, introduces high engineering overhead.
     \item Crossing the Rust and C++ boundary imposes a performance cost that is poorly characterized for high-assurance systems.
-    \item No established methodology exists for the systematic and incremental migration of C++ Boost components to Rust while maintaining compatibility with real-time automotive subsystems.
+    \item The reviewed literature does not provide a sufficiently detailed methodology for the systematic and incremental migration of C++ Boost components to Rust while maintaining compatibility with automotive subsystems.
 \end{itemize}
 
 The problem is not simply porting code from C++ to Rust, but the absence of validated techniques, architectural patterns, and tooling to bridge the impedance mismatch between C++ templates and Rust's ownership model, without breaking determinism, performance or safety requirements.
@@ -69,29 +69,33 @@ The problem is not simply porting code from C++ to Rust, but the absence of vali
 
 \section{Research Questions}
 \label{sec:research_questions}
-To address this gap, this dissertations is guided by the following research questions:
+
+To address the research gap, this dissertation is guided by the following research questions:
 \begin{enumerate}
-    \item How can Rust be integrated into existing C++/Boost based automotive systems in a way that preserves and improves safety, determinism and performance?
-    \item What are the technical criteria required to identify wich Boost library components are the most viable candidates for a migration to Rust within an automotive context?
-    \item Which Boost components represent suitable candidates for partial or complete migration to Rust, considering complexity, memory safety risk and template dependency?
-    \item What architectural patterns and \gls{FFI} strategies enable safe and efficient bidirectional communication between Rust and C++?
-    \item What measurable performance and memory safety benefits does a rust based reimplementation provide when compared with its Boost counterpart?
-    \item What are the interoperability costs ("FFI tax") and how do they impact hybrid real-time systems?
+    \item \textbf{RQ1:} What architectural and interoperability patterns can support the incremental migration of selected Boost components from C++ to Rust?
+    \item \textbf{RQ2:} What criteria can be used to identify Boost components that are suitable candidates for incremental migration in automotive-oriented software?
+    \item \textbf{RQ3:} How can selected Boost components be reimplemented using Rust abstractions while preserving their relevant observable behaviour?
+    \item \textbf{RQ4:} How can Rust/C++ FFI boundaries be designed to explicitly manage ownership, representation, lifetime, and error-handling constraints?
+    \item \textbf{RQ5:} What performance characteristics are observed when the selected Rust implementations are compared with their C++ counterparts under the evaluated workloads?
+    \item \textbf{RQ6:} Which safety guarantees are provided by Rust within the migrated components, and which guarantees must remain explicit contracts at the FFI boundary?
 \end{enumerate}
+
+The questions are intentionally scoped to the selected case studies and evaluated workloads. In particular, the performance experiments measure observed execution time and throughput rather than worst-case execution time, and therefore do not establish hard real-time guarantees.
 
 \section{Research Objectives}
 \label{sec:research_objectives}
 
-The primary objective of this dissertation is to design, implement and evaluate a methodology for the incremental migration of Boost C++ Boost components into Rust, ensuring safe and efficient interoperability within hybrid systems. This involves re-architecting critical components to leverage Rust's memory safety guarantees and evaluating resulting architectural trade-offs.
+The primary objective of this dissertation is to design, implement and evaluate a methodology for the incremental migration of selected Boost C++ components into Rust, while maintaining controlled interoperability with existing C++ systems. The work focuses on identifying repeatable migration decisions, applying them to two representative low-level libraries, and evaluating the resulting technical trade-offs.
 
-The specific objectives are
+The specific objectives are:
 \begin{itemize}
-    \item Analyze the current interoperability mechanisms between Rust and C++ (e.g., CXX, Bindgen, autocxx, cbindgen).
-    \item Identify and define criteria for selecting Boost components suitable for migration (eg. memory-safety relevance, template complexity, use in automotive systems).
-    \item Re-architect and re-implement a selected Boost component in Rust while preserving semantics and meeting strict ownership and borrowing guarantees.
-    \item Design bidirectional Rust and C++ interfaces enabling both C++ to call Rust and Rust to call C++ components.
-    \item Measure runtime performance, memory footprint and the overhead of FFI interactions.
-    \item Evaluate the overall feasibility, benefits and limitations of incremental C++ to Rust migration in high-assurance environments.
+    \item Analyze existing interoperability mechanisms between Rust and C++, including C ABI based integration, \texttt{cxx}, \texttt{bindgen}, \texttt{autocxx}, and \texttt{cbindgen}.
+    \item Define explicit criteria for selecting Boost components suitable for migration, including safety relevance, isolation, portability, interoperability, performance relevance, and implementation complexity.
+    \item Select and reimplement representative functionality from \texttt{Boost.Align} and \texttt{Boost.Endian} using Rust-native abstractions rather than performing a purely syntactic translation.
+    \item Design interoperability boundaries with explicit ownership, lifetime, representation, and error-handling contracts.
+    \item Measure functional correctness, selected performance characteristics, memory behaviour, and FFI overhead for the implemented case studies.
+    \item Identify migration patterns that are generalizable beyond the two selected libraries and distinguish them from decisions that are specific to their APIs or compatibility requirements.
+    \item Characterize the limitations of the evaluated approach, particularly at unsafe Rust and Rust/C++ FFI boundaries.
 \end{itemize}
 
 \section{Research Contributions}
@@ -99,34 +103,25 @@ The specific objectives are
 
 The contributions of this dissertation are:
 \begin{itemize}
-    \item A comprehensive overview of Rust, C++ and Rust interoperability and the Boost library ecosystem.
-    \item A systematic analysis of existing interoperability mechanisms and their suitability for template-heavy automotive codebases.
-    \item A formalized methodology for selecting and migrating Boost components to Rust.
-    \item A Rust-native reimplementation of selected Boost component with full memory safety guarantees.
-    \item A robust bidirectional FFI integration layer
-    \item A Performance evaluation comparing Rust and C++ implementations and quantifiying overhead
+    \item A structured set of criteria for assessing Boost components as incremental Rust migration candidates.
+    \item A comparative analysis of Rust/C++ interoperability mechanisms with explicit attention to compatibility, safety, portability, performance, ABI stability, and build complexity.
+    \item A migration methodology that emphasizes semantic analysis, Rust-native redesign, explicit interoperability contracts, validation, and critical analysis of residual risks.
+    \item Rust-native reimplementations of selected functionality from \texttt{Boost.Align} and \texttt{Boost.Endian}, demonstrating two different FFI strategies.
+    \item An analysis of unsafe-code and FFI boundaries, including the safety properties that remain enforceable inside Rust and those that become external contracts.
+    \item A quantitative evaluation of the selected implementations, including execution time, throughput, memory observations, correctness checks, and FFI overhead.
 \end{itemize}
 
 \section{Dissertation Plan Structure}
 \label{sec:dissertation_structure}
 
-The remainder of this dissertation plan is organized as follows:
+The remainder of this dissertation is organized as follows:
 \begin{itemize}
-    \item \textbf{Chapter 2 - State of the Art:}\newline
-    Presents the tehcnological backgrund and related work. Includes Rust fundamentals, C++ interoperability mechanisms, Boost library architecture and prior migration initiatives.
-
-    \item \textbf{Chapter 3 - Methodology and Solution proposal:}\newline
-    Defines the criteria for selecting Boost components and describes the proposed migration methodology and architectural designed.
-
-   \item \textbf{Chapter 4 - Development Plan:}\newline
-   Details the Rust reimplementation, interface design and bidirectional FFI integration.
-
-%    \item \textbf{Chapter 5 - Evaluation:}\newline
-%    Provides performance benchmarks, analysis of memory behavior, characterization of FFI overhead and a comparson with the C++ reference implementation.
-
-%    \item \textbf{Chapter 6 - Conclusions and Future Work:}\newline
-%    Summarizes findings, discusses limitations and outlines directions for future research on Rust adoption in high-assurance systems.
-
+    \item \textbf{Chapter 2 -- State of the Art:} Presents the technological background, related work, Rust/C++ interoperability mechanisms, Boost architecture, and the criteria used to compare interoperability approaches.
+    \item \textbf{Chapter 3 -- Methodology and Solution Proposal:} Defines the component-selection criteria, migration-enabling rationale, and proposed architectural methodology.
+    \item \textbf{Chapter 4 -- Migration Strategy:} Describes the systematic migration process used to analyse, redesign, implement, integrate, and validate selected Boost functionality.
+    \item \textbf{Chapter 5 -- Selected Libraries:} Describes \texttt{Boost.Align} and \texttt{Boost.Endian}, their relevance to the study, and their selection as representative low-level case studies.
+    \item \textbf{Chapter 6 -- Implementation, Evaluation and Critical Analysis:} Presents the Rust implementations, benchmark results, unsafe-code analysis, FFI safety analysis, and generalizable migration patterns.
+    \item \textbf{Chapter 7 -- Conclusions and Future Work:} Summarizes the findings, answers the research questions, states the contributions and limitations, and identifies future work.
 \end{itemize}
 
 \section{Privacy and ethics}

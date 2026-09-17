@@ -35,9 +35,9 @@
         this context, several automotive manufacturers and suppliers participate in
         Eclipse Software Defined Vehicle initiatives, including Eclipse \gls{SCORE}.
 
-        Eclipse \gls{SCORE} targets deterministic, portable, and interoperable software
-        architectures with long-term support guarantees—key concerns for ISO-26262 
-        compliant systems \parencite{eclipse_score}. These initiatives reflect the
+        Eclipse \gls{SCORE} is an open-source automotive platform initiative focused on a shared
+        foundation for software-defined vehicles and high-performance ECUs, with safety and
+        standards alignment forming part of its development context \parencite{eclipse_score}. These initiatives reflect the
         realities of modern automotive development: large, heterogeneous C++ codebases,
         long product lifecycles, and strict constraints on timing, memory usage, and
         failure modes. Such characteristics render wholesale language replacement
@@ -67,11 +67,71 @@
         behind stable, well-defined interfaces are favored, allowing them to serve
         as clear boundaries for Foreign Function Interface (FFI) integration.
 
-        \item \textbf{Industrial adoption and tooling maturity}: Libraries actively
-        used or referenced in automotive-oriented open-source projects, such as
-        those under the Eclipse \gls{SCORE} ecosystem, are considered more suitable
-        due to their demonstrated industrial relevance.
+        \item \textbf{Industrial and ecosystem relevance}: Libraries and migration patterns
+        that are meaningful for open automotive software ecosystems, including Eclipse
+        \gls{SCORE}, are preferred because they provide a concrete architectural context
+        for evaluating incremental interoperability and portability.
         \end{itemize}
+
+        \subsection{Operational Selection Criteria and Assessment}
+        \label{sec:selection_assessment}
+
+        The criteria above are converted into an explicit assessment procedure so that component selection is traceable rather than based only on qualitative intuition. Each candidate is assessed against the following dimensions: automotive relevance, safety relevance, isolation capability, interoperability constraints, portability relevance, performance relevance, implementation complexity, and suitability for exposing reusable migration patterns.
+
+        Each dimension is rated on a five-point ordinal scale, where 1 indicates low relevance to the migration objective and 5 indicates high relevance. The scale is used as a structured decision aid rather than as an objective measurement of library quality. The assessment is documented before implementation so that the selection is not driven by the implementation results.
+
+        \begin{table}[H]
+        \centering
+        \renewcommand{\arraystretch}{1.2}
+        \begin{tabularx}{\textwidth}{|l|c|X|}
+        \hline
+        \textbf{Criterion} & \textbf{Weight} & \textbf{Assessment question} \\ \hline
+        Automotive relevance & 15\% & Is the functionality relevant to low-level or embedded automotive software? \\ \hline
+        Safety relevance & 15\% & Does the component expose memory, representation, ownership, or other safety-relevant concerns? \\ \hline
+        Isolation capability & 15\% & Can the functionality be encapsulated behind a stable interface? \\ \hline
+        Interoperability relevance & 15\% & Does the component expose meaningful Rust/C++ boundary-design challenges? \\ \hline
+        Portability relevance & 10\% & Does the component involve platform, compiler, representation, or architecture concerns? \\ \hline
+        Performance relevance & 10\% & Can meaningful performance characteristics be evaluated experimentally? \\ \hline
+        Implementation complexity & 10\% & Is the component complex enough to exercise the methodology but bounded enough for a dissertation case study? \\ \hline
+        Pattern generalisability & 10\% & Does the component expose migration decisions that can be separated from library-specific details? \\ \hline
+        \end{tabularx}
+        \caption{Operational criteria used for Boost component selection}
+        \label{tab:selection_criteria}
+        \end{table}
+
+        Applying these criteria to the selected case studies gives the following qualitative assessment. The values are included to make the selection rationale explicit; they should not be interpreted as a universal ranking of Boost libraries.
+
+        \begin{table}[H]
+        \centering
+        \renewcommand{\arraystretch}{1.2}
+        \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Criterion} & \textbf{Boost.Align} & \textbf{Boost.Endian} \\ \hline
+        Automotive relevance & 4 & 4 \\ \hline
+        Safety relevance & 5 & 5 \\ \hline
+        Isolation capability & 5 & 5 \\ \hline
+        Interoperability relevance & 5 & 5 \\ \hline
+        Portability relevance & 4 & 5 \\ \hline
+        Performance relevance & 5 & 4 \\ \hline
+        Implementation complexity & 4 & 4 \\ \hline
+        Pattern generalisability & 5 & 5 \\ \hline
+        \end{tabular}
+        \caption{Qualitative assessment of the selected Boost libraries}
+        \label{tab:selected_library_assessment}
+        \end{table}
+
+        The two libraries were retained because they expose complementary migration problems rather than because they represent the largest or most template-heavy Boost components. Boost.Align concentrates on alignment, allocation, raw-pointer access, SIMD, and a C++03 compatibility boundary. Boost.Endian concentrates on binary representation, fixed-width values, generic abstractions, and a higher-level C++ interoperability mechanism. Together, these characteristics expose different points in the migration design space while remaining sufficiently bounded for controlled experimentation.
+
+        \subsection{Boost.Align and Boost.Endian as Migration Enablers}
+        \label{sec:migration_enablers}
+
+        The purpose of selecting Boost.Align and Boost.Endian is not to claim that they are representative of every complex Boost library. Instead, they are treated as \textbf{migration-enabling case studies}: each exposes a set of lower-level problems that must be solved before the methodology can be applied confidently to larger or more template-heavy components.
+
+        Boost.Align exposes patterns for representing alignment requirements, controlling ownership of allocated memory, isolating raw-pointer operations, defining opaque interfaces, and preserving interoperability with a C++03 consumer. Its implementation consequently provides a case study for translating memory-oriented C++ abstractions into Rust while keeping the unsafe surface explicit.
+
+        Boost.Endian exposes a different set of patterns. Its conversion, buffer, and arithmetic layers require explicit reasoning about binary representation, fixed-width types, generic abstractions, and C++ interoperability. The implementation uses these characteristics to investigate how semantic behaviour can be retained without reproducing the original C++ template hierarchy literally.
+
+        The resulting contribution is therefore the identification and evaluation of migration patterns rather than a claim that these two libraries solve the general Boost migration problem. The patterns that are potentially reusable include semantic rather than syntactic translation, explicit ownership contracts, isolation of unsafe operations, minimal FFI surfaces, and compatibility-driven selection of the interoperability mechanism. Decisions such as 32-byte alignment for the evaluated AVX workload or the use of a C ABI to preserve C++03 compatibility remain case-specific.
 
         \subsection{Deprioritized Components}
 
@@ -81,9 +141,10 @@
         are deprioritized due to their limited analyzability and poor suitability for
         FFI-based integration.
 
-        Similarly, libraries not directly used or referenced in automotive-oriented
-        open-source projects such as Eclipse \gls{SCORE} are not considered immediate
-        migration candidates within the scope of this work.
+        Similarly, libraries without a clear connection to the low-level concerns
+        exercised by the automotive case-study context are not prioritized within the
+        scope of this work. Eclipse \gls{SCORE} is used as a motivating ecosystem rather
+        than as evidence that the selected Boost libraries are already used by S-CORE.
 
         \subsection{Safety-Critical Constraints and ISO 26262 Alignment}
 
@@ -107,10 +168,7 @@
         language subsets, coding guidelines, and architectural enforcement
         \parencite{iso26262}.
 
-        Rust components introduced under this methodology are designed to be
-        ownership-complete and memory-safe by construction. Unsafe code is strictly
-        isolated at Foreign Function Interface (FFI) boundaries, supporting safety
-        argumentation, auditability, and certification activities.
+        Rust components introduced under this methodology are designed to maximize the use of Rust's static ownership and type guarantees. Where unsafe operations are necessary, they are isolated, documented, and treated as explicit safety-relevant boundaries. The methodology supports safety analysis and auditability, but the dissertation does not claim certification or a complete safety case.
 
         \subsection{Boost Libraries Relevant to Eclipse \gls{SCORE}}
 
@@ -232,7 +290,7 @@
 
         \item \textbf{\gls{ASIL}-B and \gls{ASIL}-C components}: Communication services, resource
         managers, and coordination logic. Rust integration at this level focuses on
-        eliminating memory safety defects while maintaining deterministic execution.
+        reducing the exposure to memory-safety defects while evaluating execution-time behaviour.
         Unsafe Rust is strictly isolated and subject to additional verification.
 
         \item \textbf{\gls{ASIL}-D components}: Rust is introduced only where its guarantees
@@ -295,7 +353,96 @@
         \end{figure}
 
         Overall, the workflow emphasizes early reduction of semantic ambiguity on the
-        C++ side and controlled introduction of Rust components, enabling safer and
-        more predictable interoperability while maintaining compliance with
-        automotive safety standards.
+        C++ side and controlled introduction of Rust components, providing a more explicit
+        interoperability boundary. Any claim of automotive safety compliance remains
+        dependent on the complete system, development process, and applicable safety case.
+
+\section{Research Design and Evaluation Plan}
+\label{sec:research_design}
+
+The proposed methodology is evaluated through two bounded case studies, \texttt{Boost.Align}
+and \texttt{Boost.Endian}. The case-study design is intended to provide evidence about the
+migration patterns identified by the methodology without implying that the results are
+general measurements for all Boost libraries or all automotive software.
+
+\subsection{Research Design}
+
+Each case study follows the same high-level sequence: analysis of the original Boost
+functionality, definition of equivalent Rust abstractions, implementation of the selected
+functionality, integration through an appropriate FFI mechanism, functional validation,
+and performance evaluation. This common structure makes it possible to distinguish
+migration decisions that arise from the general methodology from those that are specific
+to a library.
+
+Boost.Align is used to evaluate low-level memory alignment, allocation, pointer handling,
+SIMD-related operations, and compatibility with a C++03 consumer. Boost.Endian is used to
+evaluate binary representation, fixed-width values, generic abstractions, and C++/Rust
+interoperability through a higher-level interface. The two cases therefore exercise
+complementary migration concerns while remaining sufficiently bounded for controlled
+experimentation.
+
+The automotive relevance is motivated by the requirements of modern software-defined
+vehicle platforms. Eclipse S-CORE is an open-source automotive software platform aimed at
+providing a shared foundation for high-performance ECUs and safety-critical vehicle
+software, with emphasis on interoperability, portability, and automotive standards
+\parencite{eclipse_score}. In this context, the selected libraries are not presented as
+components that must be migrated in S-CORE itself. Instead, S-CORE is used as a motivating
+architectural context in which incremental migration of low-level C++ infrastructure can
+be relevant. The case studies consequently act as migration enablers: they expose
+alignment, representation, ownership, and FFI patterns that can later inform work on
+larger and more template-intensive components.
+
+\subsection{Development Workflow}
+
+The implementation follows four methodological phases: analysis; design and
+implementation; interoperability; and validation and evaluation. The first phase
+establishes the semantic baseline of the Boost implementation and identifies relevant
+interfaces, ownership assumptions, dependencies, and observable behaviour. The second
+phase defines Rust-native abstractions and implements the selected functionality without
+requiring a literal translation of the C++ structure. The interoperability phase exposes
+only the interface required by the existing C++ consumer. The final phase validates
+functional behaviour and evaluates the measured characteristics of the resulting
+implementation.
+
+This workflow deliberately separates the conceptual methodology from the implementation
+of each case study. The detailed migration procedure used within these phases is described
+in Chapter~\ref{chap:Chapter4}, while the implementation and experimental results are
+presented in Chapter~\ref{chap:Chapter6}.
+
+\subsection{Validation and Evaluation Strategy}
+
+Validation combines functional tests, interoperability checks, and benchmark measurements.
+Functional validation verifies that the selected Rust functionality produces the expected
+results for the evaluated inputs. Interoperability validation verifies that the exposed
+interfaces can be consumed from the corresponding C++ environment. Performance evaluation
+measures execution time and throughput for the workloads defined for each case study.
+
+The evaluation is intentionally interpreted as experimental evidence for the selected
+workloads. It does not establish worst-case execution time (WCET), jitter bounds,
+schedulability, hard real-time guarantees, or a complete ISO 26262 safety case. Likewise,
+process-level memory measurements are treated as observations of the benchmark process,
+not as proof of lower memory consumption in general.
+
+\subsection{Experimental Configuration}
+
+The experiments use Rust 1.93 and Boost 1.91.0 as the implementation and reference
+environments, respectively. Boost.Align is evaluated against a C++03-compatible interface,
+while Boost.Endian uses the C++ interoperability mechanism selected for its implementation.
+The benchmark configurations use release builds and repeated measurements; the reported
+results are presented with the exact workload parameters in Chapter~\ref{chap:Chapter6}.
+
+The evaluation focuses on three evidence categories: functional equivalence, measured
+performance, and interoperability/safety-boundary characteristics. These categories are
+sufficient to assess the feasibility of the proposed migration patterns while avoiding
+claims that would require broader system-level experiments.
+
+\subsection{Evaluation Scope and Limitations}
+
+The selected case studies represent only a subset of Boost functionality. The results are
+therefore used to evaluate the migration approach and identify practical trade-offs rather
+than to generalize performance or safety properties to the complete Boost ecosystem.
+In particular, the evaluation does not include complete vehicle-level integration,
+long-duration operational testing, WCET analysis, multicore scheduling analysis, formal
+verification, or certification assessment. These limitations are considered explicitly
+when interpreting the results and the research questions in Chapter~\ref{chap:Chapter7}.
 

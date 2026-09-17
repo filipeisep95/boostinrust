@@ -1,216 +1,145 @@
-\chapter{Development Plan}
+\chapter{Migration Strategy}
 \label{chap:Chapter4}
 
-This chapter presents the development plan for the proposed Boost-to-Rust
-migration methodology. It details the planned reimplementation of selected
-components in Rust, the design of stable interfaces, and the integration of
-bidirectional \gls{FFI}. The plan is structured to
-support incremental adoption while maintaining compliance with automotive
-safety standards such as ISO-26262 and architectural principles from
-AUTOSAR Adaptive.
+This chapter defines a systematic strategy for migrating selected Boost libraries to Rust.
+The strategy establishes a common methodology that is applicable to each of the selected libraries and provides
+a structured approach for evaluating the resulting implementations.
 
-The development activities are scheduled between February and July and are
-organized to progressively reduce technical risk while preserving functional
-continuity of the existing C++ system.
+The primary objective of the proposed strategy is to reproduce the relevant functionality of the selected Boost libraries in Rust 
+while preserving their expected behavior and enabling their integration with existing C++ codebases. In addition, the strategy 
+considers the requirements and constraints associated with the potential use of the migrated libraries in safety-critical 
+automotive software architectures.
 
-\section{Objectives and Scope}
-
-The primary objectives of this development phase are:
-
-\begin{itemize}
-    \item To reimplement selected Boost-based components in Rust with equivalent
-    functionality and improved memory-safety guarantees.
-    \item To design explicit, minimal, and auditable interfaces between C++ and
-    Rust components.
-    \item To integrate Rust modules incrementally using bidirectional \gls{FFI},
-    preserving deterministic behavior and freedom from interference.
-    \item To validate the resulting hybrid system against safety, correctness,
-    and performance expectations relevant to automotive software.
-\end{itemize}
-
-The scope of this chapter is limited to architectural and integration-level
-development. Functional feature expansion beyond parity with the existing C++
-implementation is explicitly excluded.
-
-\section{Development Phases Overview}
-
-The development plan is divided into six sequential phases:
-
+The migration strategy is divided into six main steps. These steps operationalise the methodology introduced in Chapter~\ref{chap:Chapter3} and provide a common procedure for both case studies:
 \begin{enumerate}
-    \item System analysis and Boost component selection
-    \item Architectural refactoring and interface definition
-    \item Rust reimplementation of selected components
-    \item Bidirectional \gls{FFI} integration
-    \item Validation and safety analysis
-    \item Consolidation and documentation
+\item \textbf{Understanding the library's functionality and its dependencies.}
+
+The first step consists of analyzing the selected Boost library's source code, documentation and 
+relevant technical literature, to understand its purpose, functionality, interfaces and dependencies.
+
+This analysis identifies the relevant classes,funtions, data structures, algorithms, platform-specific
+behavior and interactions with other libraries.
+Particular attention is given to aspects that affect the observable behavior of the library and that may influence its migration to Rust.
+
+A comprehensive understanding of these aspects is essential to ensure that the Rust implementation reproduces the relevant
+semantics of the original library and can be subsequently be integrated into existing C++ codebases.
+
+\item \textbf{Define Rust equivalents for the library's classes, functions, and data structures.}
+
+Based on the analysus of the library's original implementation, the equivalent Rust abstractions
+are defined for the library's classes, functions, data structures and interfaces. 
+
+The Rust design does not necessarily replicate the structure of the original C++ implementation. 
+Where appropriate, the design may differ in order to take advantage of Rust's ownership model,
+type system, error handling mechanisms and idiomatic programmig practices, while preserving the required behavior of the original library.
+
+\item \textbf{Implement the library's functionality in Rust, ensuring that it adheres to Rust's memory safety guarantees 
+and best practices.}
+
+The library's functionality is reimplemented in Rust. During this stage, particular attention is given to the Rust's ownership
+and borrowing model, memory safety guarantees, error handling and idiomatic design principles. 
+
+The implemenentation also considers the requirements and constraints of intended target environment.
+Where the use of \texttt{unsafe} Rust is necessary, such usage should be minimized and restricted to well-defined boundaries, 
+particularly when interacting with external code or platform-specific functionality.
+
+\item \textbf{Create a C++ wrapper for the Rust implementation, allowing it to be used in existing C++ codebases.}
+
+To enable integration with existing C++ codebases, an interoperability layer (C++ wrapper) is developed around the Rust implementation. 
+
+The interoperability layer provides an interface suitable for use by the existing C++ applications while isolating the 
+underlying Rust implementation from the consuming code.
+Particular attention is given to the representation of data, ownership and object lifetime, error handling, memory management and 
+the interaction between the C++ and Rust components.
+
+\item \textbf{Test the Rust implementation and the C++ wrapper to ensure that they function correctly 
+and meet performance requirements.}
+
+The Rust implementation and its C++ wrapper are tested to verify functional correctness, behavioral equivalence with the original
+Boost library where applicable, interoperability and performance. 
+
+The original Boost implementation serves as a reference when behavioral compatibility is required. 
+Equivalent inputs and relevant execution scenarios are used to identify discrepancies between the original and migrated implementations.
+
+Performance evaluation is also performed to determine whether the Rust implementation and the 
+interoperability layer introduce unacceptable overhead compared with the original implementation.
+
+\item \textbf{Document the migration process, including any challenges encountered and solutions implemented, 
+to provide guidance for future migrations of other Boost libraries to Rust.}
+
+The final step consists of documenting the migration process, including design decisions, encoutered challenges, solutions, 
+testing results and lessons learned. 
+
+This documentation provides a reference for future migrations to other Boost libraries and 
+contributes to the definition of a repeatable migration methodology.
+
 \end{enumerate}
 
-Each phase produces concrete artifacts that serve as inputs for the subsequent
-phase, enabling traceability and controlled progression consistent with
-ISO-26262 development practices.
+Among these steps, two are particularly critical for the success of the migration strategy. The first is the {analysis of 
+the library's functionality and dependencies}, since an incomplete understanding of the original implementation can result in 
+incorrect assumptions about its behavior or dependencies. The second is the \textbf{implementation of the functionality in Rust}, 
+as this stage requires translating the original C++ abstractions into Rust while preserving the required semantics and taking 
+advantage of Rust's memory safety guarantees and type system. These two stages therefore have a significant influence on the 
+correctness and overall sucess of the migration.
 
-\section{System Analysis and Component Selection}
-
-\subsection*{February}
-
-The initial phase focuses on analyzing the existing C++ system and identifying
-Boost libraries that are relevant to automotive software architectures such as
-those used in Eclipse SCORE–based environments.
-
-The analysis includes:
-\begin{itemize}
-    \item Identification of Boost libraries in use and their functional roles
-    \item Classification of components by criticality and \gls{ASIL} level
-    \item Mapping of Boost abstractions to potential Rust-native equivalents
-\end{itemize}
-
-This phase establishes the baseline architecture and defines the migration
-targets for subsequent development.
-
-\section{Architectural Refactoring and Interface Design}
-
-\subsection*{March}
-
-In this phase, the selected C++ components are refactored to reduce semantic
-ambiguity and prepare them for interoperability. Boost abstractions are used to
-replace raw pointers, ad hoc ownership conventions, and implicit lifetimes.
-
-Key activities include:
-\begin{itemize}
-    \item Encapsulation of migrated components behind stable interfaces
-    \item Elimination of undefined behavior patterns
-    \item Definition of ownership and lifetime semantics at component boundaries
-\end{itemize}
-
-This refactoring step does not change observable behavior but improves
-analyzability and safety argumentation.
-
-\section{Rust Reimplementation}
-
-\subsection*{April}
-
-During this phase, selected Boost-based components are reimplemented in Rust.
-The Rust implementations are designed to be ownership-complete and memory-safe
-by construction.
-
-Design constraints include:
-\begin{itemize}
-    \item Explicit ownership and borrowing semantics
-    \item Deterministic execution suitable for timing analysis
-    \item Minimal use of \texttt{unsafe} code, isolated and documented
-\end{itemize}
-
-Functional equivalence with the original C++ components is verified through
-unit testing and interface-level validation.
-
-\section{Bidirectional \gls{FFI} Integration}
-
-\subsection*{May}
-
-This phase introduces bidirectional \gls{FFI} integration between C++ and Rust.
-Stable C-compatible interfaces are defined, and responsibility for memory
-allocation, ownership transfer, and error handling is made explicit.
-
-Key concerns addressed include:
-\begin{itemize}
-    \item Isolation of unsafe code at \gls{FFI} boundaries
-    \item Prevention of exception and panic propagation across language borders
-    \item Alignment with AUTOSAR Adaptive service-oriented communication models
-\end{itemize}
-
-The \gls{FFI} boundary is treated as a safety-relevant interface and is subject to
-additional review.
-
-\section{Validation and Safety Analysis}
-
-\subsection*{June}
-
-Validation activities focus on ensuring that the hybrid C++/Rust system meets
-functional, safety, and performance expectations.
-
-This includes:
-\begin{itemize}
-    \item Functional regression testing
-    \item Concurrency and race-condition analysis
-    \item Review of freedom from interference between components of different
-    \gls{ASIL} levels
-\end{itemize}
-
-The results of this phase support the safety argumentation required for
-ISO-26262 compliant systems.
-
-\section{Consolidation and Documentation}
-
-\subsection*{July}
-
-The final phase consolidates the development results and prepares the system
-for evaluation and reporting.
-
-Activities include:
-\begin{itemize}
-    \item Final architectural documentation
-    \item Evaluation of migration feasibility and limitations
-    \item Documentation of lessons learned and future work
-\end{itemize}
-
-This phase ensures that the development process and outcomes are reproducible
-and auditable.
-
-\section{Development Timeline}
-
-Table \ref{tab:development_gantt} presents a Gantt-style overview of
-the development plan covering the February--September period. The
-activities are intentionally overlapping to reflect the iterative
-nature of the migration process.
-
-\begin{table}[H]
-
+\begin{figure}[H]
 \centering
+\includegraphics[width=0.25\textwidth]{ch4/assets/strategy.png}
+\decoRule
+\caption[Strategy]{Migration strategy}
+\label{fig:Strategy}
+\end{figure}
 
-\renewcommand{\arraystretch}{1.3}
+\newpage
 
-\begin{tabular}{|l|c|c|c|c|c|c|c|c|}
+The six steps described above can be grouped into four main phases, as follows:
 
-\hline
+\begin{enumerate}
+\item \textbf{Analysis}
+\begin{enumerate}
+\item Understanding the library's functionality and dependencies.
+\item Defining the migration scope and requirements.
+\end{enumerate}
+\item \textbf{Design and Implementation}
+\begin{enumerate}
+\item Defining the Rust equivalents of the relevant C++ abstractions.
+\item Implementing the required functionality in Rust.
+\end{enumerate}
+\item \textbf{Interoperability}
+\begin{enumerate}
+\item Developing the interoperability layer between Rust and C++.
+\end{enumerate}
+\item \textbf{Validation and Evaluation}
+\begin{enumerate}
+\item Testing functional correctness, behavioral equivalence, interoperability, and performance.
+\item Documenting the results, limitations, and lessons learned.
+\end{enumerate}
+\end{enumerate}
 
-\textbf{Activity / Month} &
-\textbf{Feb} &
-\textbf{Mar} &
-\textbf{Apr} &
-\textbf{May} &
-\textbf{Jun} &
-\textbf{Jul} &
-\textbf{Aug} &
-\textbf{Sep} \\ \hline
+The phases are illustrated in Figure \ref{fig:Phases}.
 
-System Analysis and Boost Selection
-    & X & X &   &   &   &   &   &   \\ \hline
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{ch4/assets/phases.png}
+\decoRule
+\caption{Migration phases}
+\label{fig:Phases}
+\end{figure}
 
-Architectural Refactoring and Interface Design
-    &   & X & X &   &   &   &   &   \\ \hline
+\newpage
 
-Rust Reimplementation
-    &   &   & X & X &   &   &   &   \\ \hline
+The migration strategy aims to satisfy the following objectives:
 
-Bidirectional \gls{FFI} Integration
-    &   &   &   & X & X &   &   &   \\ \hline
+\begin{itemize}
+\item Preserve the relevant behavior of the original Boost library;
+\item Provide equivalent functionality through a Rust implementation;
+\item Maintain interoperability with existing C++ applications;
+\item Leverage Rust's memory and type safety guarantees;
+\item Maintain acceptable performance compared with the original implementation;
+\item Minimize and isolate the use of \texttt{unsafe} Rust, particularly at interoperability boundaries;
+\item Consider the requirements and constraints of the intended automotive environment.
+\end{itemize}
 
-Validation and Safety Analysis
-    &   &   &   &   & X & X & X &   \\ \hline
-
-Performance Evaluation and Optimization
-    &   &   &   &   &   & X & X &   \\ \hline
-
-Consolidation and Documentation
-    &   &   &   &   &   &   & X & X \\ \hline
-
-Final Evaluation and Reporting
-    &   &   &   &   &   &   &   & X \\ \hline
-
-\end{tabular}
-
-\caption{Gantt-style development plan for the Boost-to-Rust migration}
-
-\label{tab:development_gantt}
-
-\end{table}
+The success of a migration is therefore evaluated according to the extent to which these objectives are satisfied. 
+The specific application of the proposed strategy, including the analysis, implementation, interoperability and 
+evaluation of each selected Boost library, is presented in the following chapter.
