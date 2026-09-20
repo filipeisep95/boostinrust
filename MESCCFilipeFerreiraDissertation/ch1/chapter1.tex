@@ -16,7 +16,7 @@ The systems must operate under strict real-time, reliability and safety requerim
 In this environment, memory safety has a special importance, as software faults can directly translate into physical hazards \parencite{adacore_nsa_cisa_msl}.
 
 Historically, C++ has been the dominant language (paired with C) in embedded and automotive development due to its performance, 
-deterministic resource use and mature ecosystem \parencite{ISO26262_Part6}. 
+predictable resource use and mature ecosystem \parencite{ISO26262_Part6}. 
 However, its dependence on manual memory management continues to be a major source of vulnerabilities such as: 
 buffer overflows, dangling pointes, race conditions and undefined behaviors \parencite{MISRACpp2023}. 
 Such issues are incompatible with the needs ofsafety critical cyber-physical systems, 
@@ -49,7 +49,7 @@ that are deeply coupled with the C++ ecosystem and reliant on complex, template-
 The central results from the tension between two different realities:
 \begin{enumerate}
     \item \textbf{C++ is deeply entrenched in automotive systems}, specially through heavily templated, performance-critical frameworks like Boost.
-    \item  \textbf{Rust provides strong memory safety guarantees}, but its adoption is hindered by the difficulty of interoperating with complex C++ abstrations creating a challenge for a transition between C++ and Rust. 
+    \item  \textbf{Rust provides compile-time ownership and borrowing checks}, but its adoption is hindered by the difficulty of interoperating with complex C++ abstrations creating a challenge for a transition between C++ and Rust. 
 \end{enumerate} 
 
 Currently, the interoperability approaches rely mainly on C-style \gls{FFI} . 
@@ -64,7 +64,7 @@ As result of this limitation:
     \item The reviewed literature does not provide a sufficiently detailed methodology for the systematic and incremental migration of C++ Boost components to Rust while maintaining compatibility with automotive subsystems.
 \end{itemize}
 
-The problem is not simply porting code from C++ to Rust, but the absence of validated techniques, architectural patterns, and tooling to bridge the impedance mismatch between C++ templates and Rust's ownership model, without breaking determinism, performance or safety requirements.
+The problem is not simply porting code from C++ to Rust, but the absence of validated techniques, architectural patterns, and tooling to bridge the impedance mismatch between C++ templates and Rust's ownership model, without changing the required performance and safety properties.
 
 
 \section{Research Questions}

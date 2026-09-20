@@ -33,11 +33,11 @@ The Rust design does not necessarily replicate the structure of the original C++
 Where appropriate, the design may differ in order to take advantage of Rust's ownership model,
 type system, error handling mechanisms and idiomatic programmig practices, while preserving the required behavior of the original library.
 
-\item \textbf{Implement the library's functionality in Rust, ensuring that it adheres to Rust's memory safety guarantees 
+\item \textbf{Implement the library's functionality in Rust, ensuring that it adheres to Rust's ownership and borrowing properties 
 and best practices.}
 
 The library's functionality is reimplemented in Rust. During this stage, particular attention is given to the Rust's ownership
-and borrowing model, memory safety guarantees, error handling and idiomatic design principles. 
+and borrowing model, ownership and borrowing properties, error handling and idiomatic design principles. 
 
 The implemenentation also considers the requirements and constraints of intended target environment.
 Where the use of \texttt{unsafe} Rust is necessary, such usage should be minimized and restricted to well-defined boundaries, 
@@ -79,7 +79,7 @@ Among these steps, two are particularly critical for the success of the migratio
 the library's functionality and dependencies}, since an incomplete understanding of the original implementation can result in 
 incorrect assumptions about its behavior or dependencies. The second is the \textbf{implementation of the functionality in Rust}, 
 as this stage requires translating the original C++ abstractions into Rust while preserving the required semantics and taking 
-advantage of Rust's memory safety guarantees and type system. These two stages therefore have a significant influence on the 
+advantage of Rust's ownership and borrowing properties and type system. These two stages therefore have a significant influence on the 
 correctness and overall sucess of the migration.
 
 \begin{figure}[H]

@@ -53,7 +53,7 @@
         management, and concurrency control, which are prevalent in automotive
         Electronic Control Units (ECUs) and service-oriented vehicle architectures.
 
-        \item \textbf{Deterministic behavior}: Libraries whose runtime behavior is
+        \item \textbf{Predictable behavior}: Libraries whose runtime behavior is
         predictable and suitable for real-time or near-real-time constraints are
         prioritized, aligning with automotive requirements for bounded latency and
         reproducible execution.
@@ -218,7 +218,7 @@
 
         Boost.Chrono &
         \texttt{std::time} &
-        Time measurement and timeout handling with deterministic semantics \\ \hline
+        Time measurement and timeout handling with well-defined semantics \\ \hline
 
         \end{tabular}
         \caption{Boost libraries relevant to Eclipse SCORE–style automotive systems and Rust equivalents}
@@ -261,7 +261,7 @@
         development. Such libraries are designed from the outset with:
         \begin{itemize}
         \item Explicit ownership and lifetime semantics
-        \item Deterministic execution models suitable for real-time analysis
+        \item Predictable execution models relevant to real-time analysis
         \item Minimal and auditable unsafe code
         \item Alignment with AUTOSAR Adaptive concepts
         \end{itemize}
@@ -316,7 +316,7 @@
         The process begins with a \textbf{comparative analysis} of existing Boost
         library usage and available Rust-native equivalents. This step establishes a
         semantic baseline by identifying ownership models, concurrency assumptions,
-        error-handling mechanisms, and determinism properties already enforced in the
+        error-handling mechanisms, and execution and timing properties already enforced in the
         C++ architecture.
 
         Based on this analysis, an \textbf{architectural refactoring phase} follows,
@@ -338,7 +338,7 @@
         and safety argumentation evolve.
 
         Throughout the process, \textbf{continuous verification and validation} are
-        performed to ensure functional equivalence, timing predictability, and freedom
+        performed to ensure functional equivalence, timing behaviour, and freedom
         from interference. Feedback from each iteration informs subsequent migration
         steps, allowing the workflow to adapt to architectural constraints and
         certification requirements.

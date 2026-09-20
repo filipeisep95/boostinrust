@@ -13,9 +13,9 @@ Recent studies on microcontroller applications show that Rust can have similar s
 with lower energy use than interpreted languages. While performance evaluations on platforms, such as Raspberry Pi, 
 indicates that Rust FFT implementations can match or exceed C in energy efficiency \parencite{dashdamirli2025analyzing,rooney2023evaluating}.
 
-These characteristics are dominant in systems with strict deterministic requirements, 
+These characteristics are dominant in systems with strict predictable requirements, 
 such as automotive Electronic Control Units (ECUs), high-frequency trading platforms, and real-time robotics. 
-In these domains, the non-determinism introduced by garbage-collection "stop-the-world" pauses is not appropriate due to 
+In these domains, the non-predictability introduced by garbage-collection "stop-the-world" pauses is not appropriate due to 
 hard real-time latency constraints. Furthermore, resource-constrained embedded environments often cannot afford 
 the runtime overhead associated with managed languages. Rust solves this problem through an ownership model and a 
 strict borrow checker enforced at compile time. By tracking the lifetime and scope of every value during compilation, 
@@ -130,7 +130,7 @@ languages that interoperate with C++ instead of replacing it are preferred.
 The main strenghts of C++ are:
 \begin{itemize}
     \item High performance (specially comparing with C) \parencite{Stroustrup2020}.
-    \item Deterministic resource management through \gls{RAII} \parencite{stroustrup2013cpp}.
+    \item Scope-based resource management through \gls{RAII} \parencite{stroustrup2013cpp}.
     \item Support for control of hardware and memory \parencite{stroustrup2013cpp}.
     \item String abstraction mechanisms as templates, operator overloading and generic programming \parencite{stroustrup2013cpp}.
     \item Mature tools, compilers, profiling and debugging ecosystems \parencite{CppCon2020}.
@@ -662,7 +662,7 @@ Rust could prevent and the vulnerabilities Rust cannot prevent. Within this pape
 kernel and Curl, were analyzed in order to map the vulnerabilities. 
 
 The study identified a total of 4,507 vulnerabilities across these projects, 2,257 of which had specific 
-Common Weakness Enumeration \gls{CWE} designations. These were mapped to Rust's safety guarantees to determine preventative potential. 
+Common Weakness Enumeration \gls{CWE} designations. These were mapped to Rust's safety guarantees to determine prevention potential. 
 The analysis reveals that a significant majority of historical security issues in C are memory safety errors that 
 Rust effectively eliminates at compile time.
 

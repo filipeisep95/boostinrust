@@ -34,7 +34,7 @@ The implementations show two compatible approaches. Boost.Align uses a small C-c
 
 \subsection{RQ5 -- Observed performance characteristics}
 
-The evaluated workloads show competitive measured execution times for the Rust implementations. Boost.Align measured approximately 4.7\% lower execution time in the selected end-to-end AVX workload, while Boost.Endian measured approximately 35\% lower execution time than the manual C++ baseline across the tested sizes. These are workload-specific measurements and do not establish universal performance improvements. In particular, the Align implementations did not use identical implementation details in every aspect, and the Endian baseline was not the original Boost.Endian implementation.
+The evaluated workloads show competitive measured execution times for the Rust implementations. Boost.Align measured approximately 4.7\% lower execution time in the selected end-to-end AVX workload, while Boost.Endian measured approximately 35\% lower execution time than the manual C++ baseline across the tested sizes. These are workload-specific measurements and do not establish universal performance differences. In particular, the Align implementations did not use identical implementation details in every aspect, and the Endian baseline was not the original Boost.Endian implementation.
 
 \subsection{RQ6 -- Safety guarantees and FFI contracts}
 
@@ -57,946 +57,116 @@ Finally, the Endian performance comparison uses a manual C++ byte-manipulation b
 \section{Future Work}
 \label{sec:future_work}
 
-The following sections consolidate the implementation improvements and validation activities identified during the study. They are future work rather than evidence required to support the conclusions above.
+The work presented in this dissertation establishes a migration methodology and
+two implemented case studies, but it also identifies several directions for
+further development. These directions are deliberately limited to gaps that
+affect the completeness, robustness, or external validation of the current
+results. They should be understood as extensions of the present work, rather
+than as requirements for the conclusions reached in this dissertation.
 
-\section{Boost.Align Improvements}
+\subsection{Implementation Completion}
 
-\label{sec:align-improvements}
+For \texttt{Boost.Align}, the most relevant next steps are to generalise the
+current aligned-buffer abstraction, reduce the amount of low-level pointer
+handling exposed by the implementation, and improve the separation between
+generic aligned storage and the SIMD-specific processing demonstrated in the
+case study. Additional supported data types and explicit handling of runtime
+SIMD capabilities could also make the implementation applicable to a wider
+range of workloads.
 
-The Boost.Align implementation described in Chapter~\ref{chap:Chapter6} provides an aligned
-buffer abstraction, compile-time alignment through Rust's
-\texttt{\#[repr(align(...))]} attribute, AVX-based processing, and a
-C-compatible interface. The implementation successfully demonstrates that
-the alignment requirements of the selected use case can be expressed using
-Rust's type system.
+For \texttt{Boost.Endian}, the main implementation gap is API coverage.
+Future work should consolidate the experimental implementation variants into
+one canonical implementation and extend support for the non-standard integer
+widths and buffer representations provided by Boost.Endian. The C++ interface
+should also be expanded where required, with an explicit distinction between
+the Rust API and the subset exposed through FFI.
 
-The current implementation is nevertheless intentionally narrower than the
-complete Boost.Align API. The following improvements would increase its
-generality and suitability for production use.
+\subsection{Stronger Validation}
 
-
-% ------------------------------------------------------------
-\subsection{Generalisation of Alignment Requirements}
-
-The current \texttt{Aligned<T>} abstraction uses a fixed 32-byte alignment:
-
-\begin{verbatim}
-#[repr(align(32))]
-pub struct Aligned<T>(pub T);
-\end{verbatim}
-
-This is appropriate for the AVX workload evaluated in this project because
-a 256-bit AVX register contains eight 32-bit floating-point values and the
-aligned load and store operations used by the implementation require
-32-byte-aligned memory.
-
-However, fixing the alignment to 32 bytes limits the abstraction to one
-particular use case. A more general implementation should allow the required
-alignment to be selected according to the type or operation being performed.
-
-The existing \texttt{aligned\_type!} macro partially addresses this
-limitation by allowing a user-defined alignment:
-
-\begin{verbatim}
-aligned_type!(TypeName, InnerType, Alignment);
-\end{verbatim}
-
-A future implementation could replace the macro-based interface with a more
-general abstraction based on Rust's type system and allocation facilities.
-Such an abstraction would allow the same implementation to support different
-alignment requirements where required.
-
-This would make the Rust implementation more closely applicable to the wider
-class of alignment requirements supported by Boost.Align, whose purpose is to
-provide portable control and inspection of memory alignment
-\cite{boostalign}.
-
-
-% ------------------------------------------------------------
-\subsection{Expansion of the Boost.Align API}
-
-The current implementation focuses on aligned storage and aligned SIMD
-processing rather than reproducing the complete Boost.Align API.
-
-In particular, the implementation does not currently provide direct Rust
-equivalents for all of the following Boost.Align facilities:
+The current experiments provide quantitative evidence for the selected
+workloads, but broader validation would improve the external validity of the
+results. In particular, future experiments should:
 
 \begin{itemize}
-    \item alignment calculation;
-    \item \texttt{align\_up};
-    \item \texttt{align\_down};
-    \item alignment inspection;
-    \item \texttt{is\_aligned};
-    \item general aligned allocation and deallocation;
-    \item aligned allocators; and
-    \item allocator adaptors.
+    \item compare against the original Boost.Endian implementation in
+    addition to the manual C++ baseline;
+    \item use equivalent operations and compiler settings for the C++ and Rust
+    Align implementations;
+    \item repeat measurements across additional hardware and toolchain
+    configurations;
+    \item report statistical variation in addition to average execution time;
+    \item separate the cost of FFI calls from the cost of the underlying
+    operation by processing buffers in larger batches; and
+    \item validate binary layout, alignment and endian representations
+    systematically through automated tests.
 \end{itemize}
 
-These facilities could be added as separate Rust abstractions rather than as
-a direct translation of the original C++ API.
-
-For example, alignment calculations could be expressed using integer
-operations, while allocation could be represented using Rust's
-\texttt{Layout} abstraction. The objective should remain to preserve the
-semantic guarantees of the original functionality rather than reproduce its
-C++ interface literally.
-
-This would also allow a more direct comparison between the facilities
-provided by Boost.Align and their Rust equivalents.
-
-
-% ------------------------------------------------------------
-\subsection{Removal of Unnecessary Raw Slice Construction}
-
-The current \texttt{AlignedBuffer} implementation provides the following
-operations:
-
-\begin{verbatim}
-pub fn as_slice(&self) -> &[f32]
-pub fn as_mut_slice(&mut self) -> &mut [f32]
-\end{verbatim}
-
-These operations construct Rust slices from raw pointers using
-\texttt{std::slice::from\_raw\_parts} and
-\texttt{std::slice::from\_raw\_parts\_mut}. Consequently, they require
-\texttt{unsafe} code even though the underlying buffer is owned by a safe
-Rust abstraction.
-
-A future implementation should investigate whether the internal
-representation can be reorganised so that the safe slice interface does not
-require raw-pointer reconstruction.
-
-For example, the internal representation could use an aligned allocation
-whose ownership and length are represented explicitly while exposing a safe
-slice through a carefully designed abstraction. The goal would be to reduce
-the amount of unsafe code while preserving the alignment guarantee.
-
-This would strengthen one of the central objectives of the migration
-strategy: minimizing and isolating unsafe Rust code.
-
-
-% ------------------------------------------------------------
-\subsection{Improved FFI Error Handling}
-
-The current FFI implementation uses assertions for invalid pointers and
-invalid buffer lengths. For example, the FFI functions verify that a buffer
-pointer is not null and that the buffer length is compatible with the AVX
-operation.
-
-Assertions are useful during development because they expose violations of
-the expected preconditions immediately. However, they are not an ideal
-error-handling mechanism for a production C++ interface.
-
-A future interface should replace assertions at the FFI boundary with
-explicit error handling. Possible approaches include returning an integer
-status code, returning a nullable pointer where appropriate, or exposing a
-dedicated error enumeration.
-
-For example:
-
-\begin{verbatim}
-enum AlignError {
-    NullPointer,
-    InvalidLength,
-    UnsupportedArchitecture,
-    InvalidAlignment
-}
-\end{verbatim}
-
-Such an interface would allow the C++ caller to handle invalid input without
-depending on Rust panic behavior.
-
-This is particularly important for safety-oriented systems, where error
-handling should be deterministic and explicitly defined at component
-boundaries.
-
-
-% ------------------------------------------------------------
-\subsection{Runtime SIMD Feature Detection}
-
-The current SIMD implementation is explicitly compiled with:
-
-\begin{verbatim}
-#[target_feature(enable = "avx")]
-\end{verbatim}
-
-and uses AVX intrinsics such as
-\texttt{\_mm256\_load\_ps},
-\texttt{\_mm256\_add\_ps}, and
-\texttt{\_mm256\_store\_ps}.
-
-This is suitable for the experimental environment used by the project but
-introduces an architectural assumption: the target processor must support
-AVX.
-
-A more portable implementation should distinguish between the aligned
-storage abstraction and the instruction set used to process that storage.
-
-A future implementation could therefore provide multiple execution paths:
-
-\begin{verbatim}
-aligned buffer
-|
-+---- scalar implementation
-|
-+---- SSE implementation
-|
-+---- AVX implementation
-|
-+---- AVX2 implementation
-\end{verbatim}
-
-The appropriate implementation could then be selected according to
-compile-time target information or runtime CPU feature detection.
-
-This would make the alignment component more portable across different
-processor architectures and configurations encountered in automotive
-systems.
-
-
-% ------------------------------------------------------------
-\subsection{Generalisation Beyond \texttt{f32}}
-
-The current \texttt{AlignedBuffer} is specifically designed around
-\texttt{f32} values and the \texttt{F32x8} representation.
-
-This design is appropriate for demonstrating AVX processing, but it means
-that the buffer abstraction itself is tied to one data type.
-
-A future implementation could separate the generic aligned storage
-abstraction from the particular SIMD kernel. For example:
-
-\begin{verbatim}
-AlignedBuffer<T, A>
-\end{verbatim}
-
-could represent aligned storage independently of whether the stored values
-are floating-point values, integers, or user-defined structures.
-
-The SIMD operation could then be implemented separately for each supported
-type and architecture.
-
-Such a design would make the alignment component more closely resemble the
-general-purpose nature of Boost.Align while retaining specialized optimized
-implementations where appropriate.
-
-
-% ------------------------------------------------------------
-\subsection{Improved Memory and Performance Evaluation}
-
-The current benchmark provides a positive performance result for the selected
-AVX workload. The repository reports an average iteration time of
-approximately 20.70~ms for Rust compared with 21.68~ms for Boost.Align.
-The corresponding reported throughput is approximately 6.48~GB/s for Rust
-and 6.19~GB/s for Boost.Align, giving a Boost-to-Rust execution-time ratio
-of approximately 1.047. Thus, the Rust implementation was approximately
-approximately 4.7\% lower measured execution time in the selected workload.
-
-The result should nevertheless be interpreted as a workload-specific
-observation rather than evidence that Rust is generally faster than
-Boost.Align. The benchmark uses a single 64~MiB workload, a 32-byte
-alignment requirement and AVX processing.
-
-Furthermore, the two SIMD kernels are not instruction-identical. The C++
-benchmark uses \texttt{\_mm256\_mul\_ps} with a vector containing
-\texttt{2.0f}, whereas the Rust implementation uses
-\texttt{\_mm256\_add\_ps(v,v)}. Although both operations produce the same
-mathematical result for the benchmark input, they represent different
-instructions and may have different performance characteristics.
-
-The memory measurements also identify an important area for further
-investigation. The reported RSS increase during allocation was approximately
-196~KB for the Boost implementation and 65,540~KB for the Rust
-implementation, while both implementations subsequently showed approximately
-65,540~KB of RSS reduction during deallocation.
-
-This difference should therefore be investigated before drawing conclusions
-about allocator efficiency or memory footprint.
-
-A more comprehensive evaluation should therefore vary:
-
-\begin{itemize}
-    \item buffer size;
-    \item alignment;
-    \item data type;
-    \item CPU architecture;
-    \item SIMD instruction set;
-    \item compiler optimization level;
-    \item allocation frequency; and
-    \item number of repeated operations.
-\end{itemize}
-
-The benchmark should also use identical SIMD operations and equivalent
-compiler settings for both implementations. In addition, the memory
-measurements should be repeated independently from the processing benchmark
-to determine whether the observed RSS difference is caused by allocation
-behaviour, measurement methodology, allocator caching, or another property of
-the experimental environment.
-
-These changes would allow the performance conclusions to be generalized
-beyond the specific AVX workload used in the current implementation.
-
-
-% ============================================================
-\section{Boost.Endian Improvements}
-
-\label{sec:endian-improvements}
-
-The Boost.Endian implementation provides the three principal usage models
-identified in Boost.Endian: conversion functions, buffer types and arithmetic
-types. The implementation also provides C++ interoperability through the
-\texttt{cxx} crate.
-
-The current implementation is therefore broader than the Boost.Align
-implementation in terms of API structure. Nevertheless, several improvements
-would increase its completeness, robustness and suitability for
-interoperability.
-
-
-% ------------------------------------------------------------
-\subsection{Stabilisation of the Baseline Implementation}
-
-The repository contains several Endian implementation variants developed
-during the migration process. The comparison documentation identifies the
-original \texttt{endian} crate as the Rust-native baseline, an
-\texttt{endianclv1} implementation using a C ABI, an
-\texttt{endianclv2} implementation using a \texttt{cxx} bridge, and an
-\texttt{endianv3} implementation providing a richer demonstration interface.
-
-This experimentation is valuable because it demonstrates that FFI design is
-itself an important part of the migration process.
-
-However, the baseline implementation should be consolidated before being
-treated as the final migrated component. In particular, the repository
-documentation records that the original Rust-native implementation still
-requires further stabilization.
-
-A future version should establish one canonical Endian implementation and
-clearly separate experimental alternatives from the final migration result.
-
-The final implementation should then be evaluated using a reproducible test
-and benchmark procedure.
-
-
-% ------------------------------------------------------------
-\subsection{Expansion of Non-Standard Integer Widths}
-
-Boost.Endian supports integer representations whose widths do not necessarily
-correspond to standard C++ integer types. This includes 24-, 40-, 48- and
-56-bit representations \cite{boostendian}.
-
-The current Rust implementation provides explicit 24-bit load and store
-functionality, with the value represented internally using a wider native
-integer type.
-
-A natural extension would be to generalize this mechanism to all non-standard
-widths supported by Boost.Endian:
-
-\begin{verbatim}
-24-bit
-40-bit
-48-bit
-56-bit
-\end{verbatim}
-
-The representation should continue to use byte-oriented storage rather than
-relying on a native integer with a matching size, since Rust does not provide
-native integer types for these widths.
-
-This would allow the Rust implementation to cover a larger portion of the
-Boost.Endian buffer API while retaining the portability advantages of
-explicit byte representations.
-
-
-% ------------------------------------------------------------
-\subsection{Aligned and Unaligned Buffer Types}
-
-The Boost.Endian buffer interface distinguishes aligned and unaligned
-representations. The official Boost documentation identifies unaligned
-buffers as useful for portable representations because they avoid padding
-and architecture-dependent alignment requirements
-\cite{boostendianbuffers}.
-
-The current Rust implementation primarily represents endian-aware values
-through transparent wrappers around primitive types.
-
-A future implementation could make the distinction between aligned and
-unaligned representations explicit.
-
-An unaligned representation could use:
-
-\begin{verbatim}
-[u8; N]
-\end{verbatim}
-
-as its underlying storage.
-
-An aligned representation could use an appropriately aligned wrapper where
-the target architecture and use case justify the additional constraint.
-
-This would allow the migration to reproduce another important design choice
-in Boost.Endian while allowing applications to choose portability or
-potentially more efficient aligned access according to their requirements.
-
-
-% ------------------------------------------------------------
-\subsection{Expansion of the C++ FFI Surface}
-
-The current \texttt{cxx} bridge exposes a selected subset of the Rust
-implementation. In particular, the demonstrated bridge includes load/store
-and buffer functionality for 16-, 32- and 64-bit integer widths.
-
-The Rust implementation also contains 24-bit load/store functionality that
-is not currently exposed through the C++ bridge.
-
-A future version should define an explicit FFI coverage matrix:
-
-\begin{table}[H]
-\centering
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|l|c|c|c|}
-\hline
-\textbf{Feature} & \textbf{Boost.Endian} &
-\textbf{Rust API} & \textbf{C++ FFI} \\
-\hline
-16-bit conversion & Yes & Yes & Yes \\
-24-bit conversion & Yes & Yes & No \\
-32-bit conversion & Yes & Yes & Yes \\
-40-bit representation & Yes & No & No \\
-48-bit representation & Yes & No & No \\
-56-bit representation & Yes & No & No \\
-64-bit conversion & Yes & Yes & Yes \\
-\hline
-\end{tabular}
-\caption{Current and potential Boost.Endian interoperability coverage}
-\label{tab:endian-ffi-coverage}
-\end{table}
-
-This would make the interoperability scope explicit and prevent the C++
-interface from being interpreted as a complete representation of the Rust
-implementation.
-
-
-% ------------------------------------------------------------
-\subsection{Improved C++ Arithmetic Interface}
-
-Rust implements the arithmetic functionality through Rust operator traits
-such as \texttt{Add}, \texttt{Sub}, \texttt{Mul}, \texttt{Div},
-\texttt{BitAnd}, \texttt{BitOr} and \texttt{BitXor}. These traits provide
-an idiomatic Rust representation of Boost.Endian's arithmetic types.
-
-However, operator traits cannot simply be exported through the FFI as C++
-operator overloads.
-
-The current solution therefore uses a C++ wrapper around the FFI functions.
-
-A future implementation could improve this interface by providing a
-dedicated C++ compatibility layer that exposes an API closer to the
-corresponding Boost.Endian arithmetic types.
-
-The C++ layer would remain thin, with the actual endian representation and
-conversion logic remaining in Rust.
-
-This would produce the following architecture:
-
-\begin{verbatim}
-C++ compatibility type
-|
-v
-cxx bridge
-|
-v
-Rust EndianInt
-|
-v
-Encoding + conversion
-\end{verbatim}
-
-Such an arrangement would allow existing C++ applications to migrate
-individual uses of Boost.Endian without requiring immediate changes to their
-surrounding code.
-
-
-% ------------------------------------------------------------
-\subsection{Explicit Validation of Binary Layout}
-
-Endian-aware data types are frequently used in binary protocols and file
-formats. Therefore, numerical correctness alone is insufficient to validate
-the implementation.
-
-The tests should also verify the exact byte-level representation.
-
-For example, a value:
-
-\[
-0x01020304
-\]
-
-stored as big endian must produce:
-
-\begin{verbatim}
-01 02 03 04
-\end{verbatim}
-
-while the corresponding little-endian representation must produce:
-
-\begin{verbatim}
-04 03 02 01
-\end{verbatim}
-
-The current C++ demonstration already exercises mixed-endian structures and
-checks their binary representation. This should be expanded into a
-systematic automated test suite.
-
-The test suite should verify:
-
-\begin{itemize}
-    \item byte representation;
-    \item structure size;
-    \item field offsets;
-    \item alignment;
-    \item signed values;
-    \item negative values for non-standard widths;
-    \item floating-point representations;
-    \item round-trip conversions; and
-    \item mixed-endian structures.
-\end{itemize}
-
-These tests are particularly important because a numerically correct
-conversion can still result in an incorrect binary layout.
-
-
-% ------------------------------------------------------------
-\subsection{Improved FFI Error Handling}
-
-The current Endian FFI uses Rust slices to represent buffers crossing the
-C++/Rust boundary. This is considerably safer than reconstructing arbitrary
-Rust slices from raw pointers, but the caller is still responsible for
-supplying a buffer with the expected number of bytes.
-
-For example, a 64-bit load requires at least eight bytes.
-
-A future FFI layer should therefore expose fallible versions of the load and
-store operations. Instead of allowing an invalid slice length to trigger a
-panic, the interface could return an explicit status:
-
-\begin{verbatim}
-SUCCESS
-INVALID_LENGTH
-INVALID_ARGUMENT
-UNSUPPORTED_TYPE
-\end{verbatim}
-
-This would provide a more deterministic interface for C++ applications and
-would be preferable for production-oriented integration.
-
-
-% ------------------------------------------------------------
-\subsection{FFI Boundary Optimisation}
-
-The repository contains a dedicated benchmark comparing a native C++
-implementation with the Rust implementation accessed through the
-\texttt{cxx} bridge. The benchmark compares manual C++ big-endian 64-bit
-load/store operations with the Rust \texttt{load\_big\_u64} and
-\texttt{store\_big\_u64} functions.
-
-Both implementations pass the correctness and byte-order checks. Across the
-four tested input sizes, the Rust FFI path reports lower execution time and
-higher throughput. The Rust times range from 880~ns to 60,191,448~ns per
-iteration, while the C++ times range from 1,406~ns to 92,625,204~ns.
-
-The reported throughput is approximately 4.16--4.66~GB/s for Rust compared
-with 2.69--2.91~GB/s for C++, with an average reported speedup of
-approximately 35\%.
-
-The results are summarized in Table~\ref{tab:endian-benchmark-results}.
-
-\begin{table}[H]
-\centering
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|r|r|r|r|r|}
-\hline
-\textbf{Elements} &
-\textbf{C++ ns/iter} &
-\textbf{Rust ns/iter} &
-\textbf{C++ GB/s} &
-\textbf{Rust GB/s} \\
-\hline
-256 &
-1,406 &
-880 &
-2.91 &
-4.66 \\
-\hline
-16,384 &
-97,331 &
-62,995 &
-2.69 &
-4.16 \\
-\hline
-1,048,576 &
-5,884,663 &
-3,842,808 &
-2.85 &
-4.37 \\
-\hline
-16,777,216 &
-92,625,204 &
-60,191,448 &
-2.90 &
-4.46 \\
-\hline
-\end{tabular}
-\caption{Boost.Endian FFI benchmark results}
-\label{tab:endian-benchmark-results}
-\end{table}
-
-This result is encouraging because the Rust implementation remains
-competitive even though the C++ caller crosses the \texttt{cxx} boundary.
-However, the comparison is not a direct comparison with the Boost.Endian
-implementation. The C++ reference is a manual byte-shift implementation,
-while the Rust path calls the conversion functions through
-\texttt{rust::Slice}. Consequently, the benchmark should be interpreted as
-an evaluation of the selected Rust FFI implementation against a native C++
-byte-manipulation baseline, rather than as proof that Rust is faster than
-Boost.Endian.
-
-The benchmark should therefore distinguish between two different sources of
-overhead:
-
-\begin{enumerate}
-    \item the cost of the endian conversion itself; and
-    \item the cost of invoking the Rust implementation through FFI.
-\end{enumerate}
-
-The current benchmark performs a Rust load and Rust store for each element.
-Consequently, the number of FFI calls grows with the number of processed
-values.
-
-Although this path performs well in the tested environment, a more
-representative systems-level implementation should batch operations so that
-one FFI call processes an entire buffer.
-
-For example:
-
-\begin{verbatim}
-C++ buffer
-|
-| one FFI call
-v
-Rust process_buffer()
-|
-| process N elements
-v
-C++ buffer
-\end{verbatim}
-
-This would move the FFI boundary outside the inner processing loop and make
-the cost of the interface easier to separate from the cost of the endian
-conversion itself.
-
-A future evaluation should also include a direct Boost.Endian baseline and
-report the results separately for conversion cost, FFI cost, and complete
-application-level processing.
-
-
-% ============================================================
-\section{Common FFI Improvements}
-
-\label{sec:ffi-improvements}
-
-Although Boost.Align and Boost.Endian have different implementation
-characteristics, both expose similar challenges at the C++/Rust boundary.
-
-The first improvement is to define the ownership model explicitly for every
-FFI object. Any pointer crossing the boundary should have a documented
-owner, lifetime and destruction mechanism.
-
-The second improvement is to avoid allowing Rust panics to become the normal
-error-reporting mechanism for invalid C++ input. FFI functions should instead
-return explicit status values or use a documented error representation.
-
-The third improvement is to minimize the amount of data exchanged through the
-FFI boundary. Large buffers should preferably remain owned by the caller
-while Rust operates on borrowed slices or pointers whose validity is
-established by the interface contract.
-
-The fourth improvement is to keep unsafe code localized inside the FFI layer.
-Safe Rust abstractions should validate the relevant invariants before
-invoking the low-level operations.
-
-This produces the general migration boundary:
-
-\begin{verbatim}
-+----------------------+       +----------------------+
-|      C++ system      |       |     Rust library     |
-|                      |       |                      |
-| Existing application | <---> | Safe abstractions    |
-| Existing data types  |  FFI  | Type-level invariants|
-|                      |       | Low-level operations|
-+----------------------+       +----------------------+
-             \                   /
-              \                 /
-               +---------------+
-                 FFI boundary
-             ownership/errors/
-              representation
-\end{verbatim}
-
-Such a boundary is consistent with the migration objectives defined earlier
-in this dissertation, particularly the requirement to maintain C++
-interoperability while minimizing and isolating unsafe Rust.
-
-
-% ============================================================
-\section{Improvements to Validation}
-
-\label{sec:future-validation}
-
-The current validation demonstrates functional correctness, binary
-representation, alignment and selected performance characteristics.
-
-The benchmark results provide initial quantitative evidence for the
-performance objectives of the migration strategy. The Boost.Align benchmark
-measured approximately 20.70~ms per iteration for Rust versus 21.68~ms for
-Boost.Align, corresponding to approximately 4.7\% lower measured execution
-time for the Rust implementation. The Endian FFI benchmark reported an
-average speedup of approximately 35\% for Rust against its manual C++
-baseline.
-
-These results are useful but remain specific to the tested workloads and
-environment. A more comprehensive evaluation should therefore extend the
-validation in several dimensions.
-
-
-% ------------------------------------------------------------
-\subsection{Cross-Architecture Testing}
-
-Both selected libraries interact closely with processor architecture.
-
-For Boost.Align, this concerns alignment requirements and SIMD instruction
-availability.
-
-For Boost.Endian, this concerns native byte order and the relationship
-between the external representation and the host representation.
-
-The implementation should therefore be evaluated on both little-endian and
-big-endian architectures where practical.
-
-This would verify that the implementation does not accidentally depend on
-the little-endian architecture used by the development environment.
-
-
-% ------------------------------------------------------------
-\subsection{Compiler and Toolchain Testing}
-
-The C++ interoperability layer should also be evaluated using multiple
-compiler and toolchain configurations.
-
-At minimum, the evaluation should consider:
-
-\begin{itemize}
-    \item GCC;
-    \item Clang;
-    \item different supported Rust toolchains;
-    \item debug and release builds; and
-    \item different optimization levels.
-\end{itemize}
-
-This is particularly relevant because Boost libraries were historically
-designed to compensate for differences between C++ compilers and standard
-library implementations.
-
-A Rust migration should therefore demonstrate that the new implementation
-does not simply replace one platform-specific dependency with another.
-
-
-% ------------------------------------------------------------
-\subsection{Property-Based Testing}
-
-The existing tests use specific representative values. These are useful for
-validating known cases but do not exhaustively explore the possible input
-space.
-
-Property-based testing could provide stronger validation.
-
-For endian conversion, an important property is:
-
-\[
-reverse(reverse(x)) = x
-\]
-
-for all supported values \(x\).
-
-Similarly, for a supported endian representation \(E\):
-
-\[
-E^{-1}(E(x)) = x
-\]
-
-should hold for all valid values.
-
-For aligned buffers, properties can include:
-
-\[
-address \bmod alignment = 0
-\]
-
-and:
-
-\[
-length \bmod SIMD\_width = 0
-\]
-
-for buffers passed to the SIMD implementation.
-
-These properties can complement the existing example-based tests.
-
-
-% ------------------------------------------------------------
-\subsection{Benchmark Reproducibility}
-
-The benchmark results demonstrate the importance of reproducibility in
-performance comparisons.
-
-Future measurements should record the complete experimental configuration,
-including:
-
-\begin{itemize}
-    \item processor model;
-    \item number of available CPU cores;
-    \item operating system;
-    \item compiler versions;
-    \item Rust toolchain version;
-    \item optimization flags;
-    \item SIMD features;
-    \item buffer size;
-    \item number of iterations; and
-    \item allocation strategy.
-\end{itemize}
-
-Performance measurements should ideally be repeated sufficiently many times
-to report not only the average but also measures such as standard deviation,
-minimum and maximum execution time.
-
-This would provide stronger evidence regarding whether the observed
-differences are stable and reproducible.
-
-For Boost.Align, the C++ and Rust kernels should additionally use equivalent
-instructions. The current benchmark uses multiplication by \texttt{2.0f}
-in C++ and vector addition in Rust. A future benchmark should use the same
-operation on both sides so that the comparison isolates the implementation
-and language differences more effectively.
-
-For Boost.Endian, the benchmark should additionally include a direct
-Boost.Endian implementation. This would allow three separate comparisons:
-
-\begin{enumerate}
-    \item native C++ byte manipulation;
-    \item Boost.Endian; and
-    \item Rust Endian through FFI.
-\end{enumerate}
-
-Such a comparison would provide stronger evidence for the performance
-implications of the proposed migration.
-
-
-% ============================================================
-\section{Future Integration with Automotive Software}
-
-The selected improvements also provide a path toward evaluating the migrated
-libraries in a more realistic automotive software environment.
-
-For Boost.Align, future work could investigate aligned buffers in workloads
-involving:
-
-\begin{itemize}
-    \item sensor processing;
-    \item SIMD-based signal processing;
-    \item DMA-compatible memory;
-    \item memory pools; and
-    \item performance-critical data structures.
-\end{itemize}
-
-For Boost.Endian, representative workloads could include:
-
-\begin{itemize}
-    \item network protocol parsing;
-    \item diagnostic messages;
-    \item serialization;
-    \item binary file formats; and
-    \item communication between heterogeneous processors.
-\end{itemize}
-
-These scenarios would allow the migration methodology to be evaluated beyond
-isolated library benchmarks and closer to the types of low-level
-functionality encountered in automotive software architectures.
-
-The Eclipse S-CORE context described earlier in this dissertation provides
-one potential environment in which these evaluations could eventually be
-performed.
-
-The benchmark results also indicate that future automotive evaluation should
-consider not only raw execution time but also the location of the
-interoperability boundary. For high-frequency operations, reducing the number
-of FFI calls may be more important than optimizing an individual conversion
-operation. Similarly, for SIMD-oriented workloads, the interaction between
-alignment guarantees, instruction-set availability and memory allocation
-should be evaluated as a combined system property.
-
-
-% ============================================================
-\section{Future Work Summary}
-
-The implementations presented in Chapter~\ref{chap:Chapter6} demonstrate the feasibility of
-reimplementing selected Boost functionality in Rust, and the benchmark
-results provide initial quantitative evidence for the performance objectives
-of the migration strategy.
-
-For Boost.Align, the benchmark measured approximately 20.70~ms per iteration
-for Rust versus 21.68~ms for Boost.Align. The corresponding throughput was
-approximately 6.48~GB/s for Rust and 6.19~GB/s for Boost.Align, resulting in
-approximately 4.7\% lower measured execution time for the Rust
-implementation. However, the different SIMD instructions and the observed
-difference in RSS behaviour mean that the result should be considered
-workload-specific rather than evidence of general Rust performance
-superiority.
-
-For Boost.Endian, the FFI benchmark reported lower execution times for Rust
-at all tested input sizes, with reported throughput between approximately
-4.16 and 4.66~GB/s compared with 2.69--2.91~GB/s for the manual C++ baseline.
-The reported average speedup was approximately 35\%. This result demonstrates
-that the selected Rust implementation can provide competitive performance
-despite the use of a C++/Rust interoperability layer. However, because the
-reference implementation is a manual C++ byte-shift implementation rather
-than Boost.Endian itself, the result does not establish that Rust is faster
-than Boost.Endian.
-
-For Boost.Align, the principal improvements are the generalisation of
-alignment requirements, expansion of the API, reduction of unsafe slice
-construction, improved FFI error handling, runtime SIMD feature handling,
-support for additional data types, and broader performance evaluation.
-
-For Boost.Endian, the principal improvements are stabilisation of the
-selected implementation variant, expansion of non-standard integer widths,
-explicit aligned and unaligned representations, broader C++ FFI coverage,
-improved arithmetic interoperability, stronger binary-layout validation,
-explicit FFI error handling, and reduction of per-element FFI overhead.
-
-Across both libraries, the benchmark results suggest that future work should
-focus on improving the experimental methodology as well as the
-implementations themselves. In particular, identical workloads and
-instructions should be used when comparing implementations, direct Boost
-baselines should be added where they are currently absent, and the cost of
-repeated FFI crossings should be separated from the cost of the underlying
-operations.
-
-The most important architectural improvement remains the definition of a
-robust interoperability boundary. Ownership, representation, lifetime,
-error handling and safety invariants should be explicit at this boundary.
-
-These improvements provide a path from the current research implementation
-toward a more general and production-oriented Rust library while preserving
-the central objective of the dissertation: demonstrating how low-level Boost
-functionality can be migrated incrementally to Rust without requiring an
-immediate replacement of the surrounding C++ system.
+Cross-architecture testing would be particularly relevant for Endian because
+the implementation must distinguish external byte representation from the
+native representation of the host. Similarly, Align should be evaluated on
+architectures and SIMD configurations beyond the environment used for the
+current benchmark.
+
+These experiments would strengthen the evidence for portability and
+performance characteristics without changing the scope of the present
+conclusions.
+
+\subsection{FFI and Integration Refinement}
+
+The evaluation identified several improvements to the interoperability
+interfaces. FFI functions should preferably report invalid input through
+explicit error representations rather than relying on assertions or panic
+behaviour. Ownership, lifetime, buffer length, alignment and representation
+requirements should remain documented as part of each interface contract.
+
+For performance-sensitive applications, buffer-oriented FFI should also be
+preferred over repeated per-element calls where practical. A single call
+processing a complete buffer would make the interface overhead easier to
+measure and reduce the number of boundary crossings.
+
+Finally, the Rust and C++ interfaces should be tested as a complete
+integration rather than only through isolated examples. This includes
+compiler compatibility, build integration, ABI assumptions and regression
+tests for the observable behaviour used by existing C++ consumers.
+
+\subsection{Automotive-Oriented Validation}
+
+A natural continuation is to evaluate the migrated components in
+representative automotive-oriented workloads, such as sensor processing,
+binary protocol parsing, serialization, communication buffers, or other
+low-level data-processing paths. Eclipse S-CORE provides a relevant
+architectural context for this type of investigation because it targets
+modern automotive software architectures in which incremental coexistence of
+C++ and Rust components can be relevant.
+
+Such an evaluation should focus on integration characteristics rather than
+assuming that the results of the present microbenchmarks transfer directly
+to a complete automotive system. In particular, system-level experiments
+could examine build integration, resource usage, interface frequency and the
+interaction of the migrated component with its surrounding software.
+
+\subsection{Extension to Additional Boost Components}
+
+The most important longer-term research direction is to apply the migration
+criteria and patterns identified in this dissertation to additional Boost
+components, especially components with substantially greater template
+complexity. Such work would test whether the patterns identified here remain
+useful when the amount of generic C++ structure and dependency coupling
+increases.
+
+The selected case studies should therefore be viewed as a foundation for
+further investigation rather than as evidence that the same implementation
+strategy applies unchanged to every Boost library. Future studies can use the
+selection criteria and the distinction between general migration patterns and
+library-specific decisions established in this dissertation to determine
+which additional components are suitable candidates.
+
+\subsection{Summary}
+
+In summary, future work is concentrated in four areas: completing and
+stabilising the selected implementations, strengthening experimental
+validation, refining the FFI and automotive integration boundaries, and
+applying the methodology to additional Boost components. These extensions
+would broaden the evidence obtained in this dissertation while preserving
+its central scope: investigating an incremental and evidence-based approach
+to migrating selected low-level Boost functionality from C++ to Rust.
