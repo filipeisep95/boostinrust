@@ -95,8 +95,8 @@ is an important source of libraries for different applications.
 
 Beside the growing usage of Rust, it still relies on interoperability with C/C++ ecosystem, 
 specially for low-level applications (eg. hardware interactions, graphics, legacy protocols). 
-Interfacing Rust with foreign code is possible using through the \gls{FFI}. Usualy, an \gls{FFI} is 
-functional and efficient but often requires carefull design of abstractions, specially when crossing language 
+Interfacing Rust with foreign code is possible using through the \gls{FFI}. Usually, an \gls{FFI} is 
+functional and efficient but often requires careful design of abstractions, specially when crossing language 
 boundaries with different memory management models.
 
 \subsubsection{Adoption and Industrial Applications}
@@ -124,10 +124,10 @@ Some common industries that usually use C++ are telecommunications, automotive, 
 gaming, real-time control and large scale cloud systems \parencite{Stroustrup2020}.
 
 The main challenges these systems have is their modernization. Modernizing them while ensuring the continuity, 
-comaptibility and performance is not easy. Due to this, 
+compatibility and performance is not easy. Due to this, 
 languages that interoperate with C++ instead of replacing it are preferred.
 
-The main strenghts of C++ are:
+The main strengths of C++ are:
 \begin{itemize}
     \item High performance (specially comparing with C) \parencite{Stroustrup2020}.
     \item Scope-based resource management through \gls{RAII} \parencite{stroustrup2013cpp}.
@@ -207,7 +207,7 @@ The modification is concurrently leading to a undefined behavior.
 \end{lstlisting}
 
 The incremental of \textbf{\textit{counter}}, \textbf{counter++}, is not atomic. 
-Usualy an incremental operation includes three steps: the load of the variable into a register, 
+Usually an incremental operation includes three steps: the load of the variable into a register, 
 the value increment at the register and the value store back at the memory.
 
 When this operation is not protected by locking (e.g. using threads) or atomic types (\textbf{std::atomic<int>}), 
@@ -301,7 +301,7 @@ into existing codebases.
     progressively tighten ownership and error-handling contracts on the C++ side before introducing Rust, 
     thereby reducing the impedance mismatch at the FFI boundary.
 
-    A simulation of a shared configuration system based, it is usualy used in ROS/robotics systems.
+    A simulation of a shared configuration system based, it is usually used in ROS/robotics systems.
     \begin{lstlisting}[language=C++]
         #include <vector>
         #include <string>
@@ -438,9 +438,10 @@ A lack of structured methodology often leads to the rewrite trap stalled develop
 porting feature-rich systems.
 
 \begin{itemize}
-    \item \textbf{Performance overhead}: FFI boundaries introduce latency (10–20\% overhead in some cases) due to 
-    data marshalling. In latency-sensitive domains (HPC, HFT), an ad hoc porting strategy that places FFI boundaries 
-    in hot loops is unacceptable.
+    \item \textbf{Performance overhead}: FFI boundaries can introduce execution overhead, particularly when
+    data conversion or marshalling is required. The magnitude of this overhead is workload- and interface-dependent,
+    so it should be measured for the specific migration rather than assumed as a fixed percentage. In this dissertation,
+    FFI cost is evaluated experimentally for the selected Boost.Align workload in Chapter~\ref{sec:align_ffi_evaluation}.\parencite{rust_ffi}
     \item \textbf{Missing methodology}: There is currently no standardized process for decomposing a Boost-heavy 
     application into portable units. Developers need a systematic way to identify architectural seams where the cost of 
     the FFI boundary is minimized and the safety value of Rust is maximized.
@@ -495,7 +496,9 @@ Table~\ref{tab:ffi_mechanism_comparison} summarizes the assessment. The values a
 \begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.2}
-\begin{tabularx}{\textwidth}{|l|c|c|c|c|c|}
+{\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{|X|c|c|c|c|c|}
 \hline
 \textbf{Criterion} & \textbf{C ABI} & \textbf{cxx} & \textbf{bindgen} & \textbf{autocxx} & \textbf{cbindgen} \\ \hline
 C++03 compatibility & High & Low & High & Low & High \\ \hline
@@ -507,6 +510,7 @@ Template-heavy C++ support & Low & Medium & High & High & N/A \\ \hline
 Build complexity & Low & Medium & Medium & High & Low \\ \hline
 Auditability & High & Medium & Medium & Medium & High \\ \hline
 \end{tabularx}
+}
 \caption{Qualitative comparison of Rust/C++ interoperability mechanisms for the migration scenario}
 \label{tab:ffi_mechanism_comparison}
 \end{table}
@@ -529,7 +533,7 @@ composition, meaning a total architectural rewrite for Rust implementation of Bo
 Boost also uses frequently smart pointers to manage complex object graphs and Rust uses ownership and borrowing that is a 
 completely different approach. Those Rust rules are used to avoid the overhead of reference counting.
 
-There is an entry at Crates.io for porting Boost libraries to Rust but there is no updates since 2021. 
+There is an entry at Crates.io for porting Boost libraries to Rust but there are no updates since 2021. 
 At this moment has no source code \parencite{boosters_crate}.
 There are also Rust-native alternatives to several Boost libraries available through the Rust ecosystem. The following table provides examples of such alternatives \parencite{crates_io}.
 
@@ -618,7 +622,7 @@ migrate or benchmark Boost C++ libraries. The papers mainly focus on migrating C
 \subsection{Concurrency Safety: Migrating Locking primitives}
 
 Legacy C software often uses \texttt{pthread\_mutex\_lock}/\texttt{pthread\_mutex\_unlock} to control concurrency.
-If C2Rust is used to migrate the C code directly to Rust, the resulting code still contains unsafe C stlyle mutex operations, 
+If C2Rust is used to migrate the C code directly to Rust, the resulting code still contains unsafe C style mutex operations, 
 preventing Rust compiler from enforcing thread-safety guarantees \parencite{c2rust}.
 
 Was proposed, by Jaemin Hong, a solution to automatically migrate C programs to Rust with an high focus on concurrency.

@@ -56,10 +56,10 @@ evaluates existing interoperability tools, and addresses the architectural chall
 between C++ templates and Rust's ownership model.
 
 A Rust-based reimplementation of selected Boost components is developed and integrated into a hybrid C++/Rust system.
-Performance, memory usage, and interoperability overhead are experimentally evaluated to quantify the benefits
-and costs of this approach. The results demonstrate that incremental migration can significantly improve memory safety
-while preserving determinism and performance, providing practical guidance for the adoption of Rust in high-assurance
-and safety-critical software systems.
+Performance, memory behaviour, and interoperability overhead are experimentally evaluated for the selected workloads.
+The results provide evidence that the migrated functionality can preserve the tested observable behaviour while remaining
+interoperable with existing C++ code. The experiments also expose workload-specific trade-offs in execution time and
+memory behaviour, providing practical guidance for incremental Rust adoption in high-assurance software systems.
 
 \end{abstract}
 
@@ -81,11 +81,11 @@ bidirecionais e reimplementar funcionalidades críticas em Rust. O trabalho expl
 avalia ferramentas de interoperabilidade existentes e aborda os desafios arquitetônicos decorrentes da incompatibilidade 
 entre modelos C++ e o modelo de propriedade do Rust.
 
-Uma reimplementação baseada em Rust de componentes Boost selecionados é desenvolvida e integrada a um sistema híbrido C++/Rust. 
-O desempenho, o uso de memória e a sobrecarga de interoperabilidade são avaliados experimentalmente para quantificar os benefícios 
-e custos dessa abordagem. Os resultados demonstram que a migração incremental pode melhorar significativamente a segurança da memória ,
-preservando o determinismo e o desempenho, fornecendo orientações práticas para a adoção do Rust em sistemas de software de alta garantia 
-e segurança crítica.
+Uma reimplementação baseada em Rust de componentes Boost selecionados é desenvolvida e integrada a um sistema híbrido C++/Rust.
+O desempenho, o comportamento da memória e a sobrecarga de interoperabilidade são avaliados experimentalmente para as cargas de trabalho selecionadas.
+Os resultados fornecem evidência de que as funcionalidades migradas podem preservar o comportamento observável testado, mantendo a interoperabilidade
+com código C++ existente. As experiências também evidenciam compromissos específicos das cargas de trabalho relativamente ao tempo de execução
+e ao comportamento da memória, fornecendo orientações práticas para a adoção incremental de Rust em sistemas de software de alta garantia.
 
 \end{abstractotherlanguage}
 
@@ -129,10 +129,10 @@ e segurança crítica.
 %----------------------------------------------------------------------------------------
 %	ABBREVIATIONS
 %----------------------------------------------------------------------------------------
-\begin{abbreviations}{ll} % Include a list of abbreviations (a table of two columns)
+%\begin{abbreviations}{ll} % Include a list of abbreviations (a table of two columns)
 %\textbf{LAH} & \textbf{L}ist \textbf{A}bbreviations \textbf{H}ere\\
 %\textbf{WSF} & \textbf{W}hat (it) \textbf{S}tands \textbf{F}or\\
-\end{abbreviations}
+%\end{abbreviations}
 
 %----------------------------------------------------------------------------------------
 %	SYMBOLS

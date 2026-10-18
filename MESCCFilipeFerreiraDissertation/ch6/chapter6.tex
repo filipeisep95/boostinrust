@@ -43,7 +43,7 @@ of the original library are first analyzed before equivalent Rust abstractions a
 The resulting Rust implementation is then tested and evaluated against the original C++ library to ensure functional equivalence,
 memory safety, interoperability and suitability for automotive systems software.
 
-The implementation does not attempt to reproduce the interal structure of the C++ implementation directly. Instead, Rust specific
+The implementation does not attempt to reproduce the internal structure of the C++ implementation directly. Instead, Rust specific
 mechanisms are used where they provide a more appropriate representation of the original functionality. This includes Rust's ownership
 and borrowing model, type system and standard library facilities for memory layout and byte order operations.
 This distinction is particularly relevant for the selected libraries. Boost.Align requires operations involving memory alignment, 
@@ -58,7 +58,7 @@ unit testing and interface-level validation.
 A specific concern of the implementation environment is the use of \texttt{unsafe} Rust. 
 Although Rust provides alignment and memory-safety guarantees through its type system, 
 reproducing some low-level Boost functionality requires operations involving raw pointers or manually allocated memory. 
-uch operations are therefore isolated and minimized in the implementation. This follows the migration strategy's requirement to
+such operations are therefore isolated and minimized in the implementation. This follows the migration strategy's requirement to
 preserve Rust's safety guarantees while restricting unsafe operations to well-defined boundaries.
 
 Table~\ref{tab:implementation_environment} summarizes the main tools and
@@ -117,7 +117,8 @@ and standard-library mechanisms rather than attempting to reproduce the complete
 \begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|l|l|p{7cm}|}
+{\small
+\begin{tabularx}{\textwidth}{|X|X|X|}
 \hline
 \textbf{Boost.Align concept} & \textbf{Rust implementation} & \textbf{Purpose} \\ \hline
 
@@ -153,7 +154,8 @@ C++ interoperability
 & \lstinline|ffi| module
 & Exposes the buffer and SIMD operations through C ABI functions \\ \hline
 
-\end{tabular}
+\end{tabularx}
+}
 \caption{Mapping of Boost.Align concepts to the Rust implementation}
 \label{tab:boost-align-rust-mapping}
 \end{table}
@@ -335,7 +337,7 @@ without requiring explicit pointer manipulation by the caller.
 
 \subsection{Aligned Memory Allocation}
 
-Differenf from original Boost.Align interface, the Rust implementation does not explicitly expose a 
+Different from original Boost.Align interface, the Rust implementation does not explicitly expose a 
 general purpose \lstinline|aligned_alloc|/ \lstinline|aligned_free| pair. 
 Instead, aligned storage is obtained indirectly through the Rust \lstinline|Vec| abstraction.
 
@@ -729,7 +731,7 @@ arithmetic.rs
 
 A fourth module, \texttt{ffi.rs}, provides interoperability with C++ through the \texttt{cxx} crate.
 
-The implementation follows the same concptual organization as Boost.End, adapting the interfaces to Rust's type system
+The implementation follows the same conceptual organization as Boost.End, adapting the interfaces to Rust's type system
 and standard library facilities.
 
 The three Rust approaches are:
@@ -763,7 +765,8 @@ The implementation mapping is the following:
 \begin{table}[H]
     \centering
     \renewcommand{\arraystretch}{1.2}
-    \begin{tabular}{|l|l|p{5.5cm}|}
+    {\small
+\begin{tabularx}{\textwidth}{|X|X|X|}
         \hline
         \textbf{Boost.Endian concept} &
         \textbf{Rust implementation} &
@@ -830,7 +833,8 @@ The implementation mapping is the following:
         C++ access to Rust functionality \\
         \hline
 
-    \end{tabular}
+    \end{tabularx}
+    }
     \caption{Mapping between Boost.Endian concepts and their Rust implementation.}
     \label{tab:boost-endian-rust-mapping}
 \end{table}
@@ -1908,7 +1912,9 @@ Correctness & Pass & Pass \\ \hline
 \label{tab:align_end_to_end_results}
 \end{table}
 
-The measured execution time is approximately 4.7\% lower for the Rust implementation in this workload. This is an observed result, not evidence that Rust is generally faster than Boost.Align. The memory measurements also show an important trade-off: the reported RSS increase during allocation was approximately 196~KB for Boost.Align and 65,540~KB for the Rust implementation, while both showed the same virtual-memory increase. The memory result therefore does not support a claim of reduced memory consumption for the Rust implementation.
+The measured execution time is approximately 4.7\% lower for the Rust implementation in this workload. This is an observed result, not evidence that Rust is generally faster than Boost.Align.
+
+The memory table reports changes in process-level memory observations rather than the total size of the allocated buffer. The 64~MiB benchmark buffer corresponds to approximately 65,536~KB, which is consistent with the approximately 65,540~KB increase in virtual memory reported for both implementations. Virtual memory describes the process address space made available to the process, whereas RSS describes the portion observed as resident in physical memory at the measurement point. Consequently, the +196~KB RSS value for Boost.Align should not be interpreted as meaning that only 196~KB was allocated for the benchmark buffer; it is the observed RSS change at that measurement point. The substantially larger Rust RSS change indicates different observed residency behaviour during allocation. The measurements are therefore useful for describing the behaviour of these two implementations in this environment, but they do not establish a general memory-efficiency advantage for either implementation.
 
 \begin{table}[H]
 \centering
@@ -2004,22 +2010,38 @@ The Rust implementation has lower measured execution time in all four tested cas
 
 The migration deliberately distinguishes safe Rust code from operations for which Rust requires explicit \texttt{unsafe}. In Boost.Align, the unsafe surface is concentrated around raw-slice construction, AVX operations using raw pointers and architecture-specific intrinsics, and the C-compatible destruction interface. In Boost.Endian, the core conversion and representation operations use safe Rust primitives, while the C++ interoperability layer is mediated by \texttt{cxx}.
 
-The source package available for this dissertation chapter does not contain the complete Rust repository, so an exact unsafe-LOC percentage cannot be reconstructed without inventing values. The implementation description does, however, identify the principal unsafe regions explicitly. The following inventory records those regions and avoids presenting unsupported source-level counts.
+The safety analysis distinguishes the number and location of unsafe regions from the measured source-level line counts.
+The repository used for the implementation and benchmark results was inspected directly, excluding generated \texttt{target/}
+artifacts. Across the tracked Rust files, there are 1,066 non-blank, non-comment source lines. The implementation source
+files (\texttt{src/} and build scripts) account for 990 lines, while the Rust test files account for 76 lines.
+
+For this analysis, unsafe LOC is defined as non-blank, non-comment lines occurring inside an \texttt{unsafe fn} body or an
+explicit \texttt{unsafe} block. By this definition, the implementation contains 51 unsafe LOC: 51 in Boost.Align and
+0 in Boost.Endian. The test suite contains a further 4 unsafe LOC used to invoke the AVX implementation directly.
+Boost.Align contains 9 unsafe functions and 2 explicit unsafe blocks in the implementation; Boost.Endian contains none.
+These measurements show that unsafe code is concentrated in the Boost.Align pointer, SIMD, and C-compatible interface
+rather than being distributed throughout the data-model and conversion abstractions.
 
 \begin{table}[H]
 \centering
+\small
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|l|c|p{7cm}|}
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{|l|c|c|c|X|}
 \hline
-\textbf{Component} & \textbf{Principal unsafe regions} & \textbf{Safety invariants} \\ \hline
-Boost.Align & 3 & Raw slice validity; pointer validity and alignment; SIMD pointer/length assumptions; FFI destruction ownership \\ \hline
-Boost.Endian & 0 in the Rust-native core & Slice bounds and fixed-size representations are handled by safe Rust abstractions; FFI input validity remains a contract \\ \hline
-\end{tabular}
-\caption{Principal unsafe regions identified in the migrated components}
+\textbf{Component} & \textbf{Unsafe functions} & \textbf{Unsafe blocks} & \textbf{Unsafe LOC} & \textbf{Safety invariants} \\ \hline
+Boost.Align & 9 & 2 & 51 & Raw slice validity; pointer validity and alignment; SIMD pointer/length assumptions; FFI destruction ownership \\ \hline
+Boost.Endian & 0 & 0 & 0 & Slice bounds and fixed-size representations are handled by safe Rust abstractions; FFI input validity remains a contract \\ \hline
+Rust tests & 0 & 1 & 4 & The test directly invokes the AVX implementation through an unsafe block; the test establishes the required buffer alignment and length conditions \\ \hline
+\end{tabularx}
+\caption{Measured unsafe-code inventory in the Rust implementation and tests}
 \label{tab:unsafe_inventory}
 \end{table}
 
-An exact Rust LOC and unsafe-LOC measurement should be generated directly from the final repository before submission, for example by using a source-code line counter and separately reporting unsafe blocks and unsafe functions. The dissertation deliberately does not infer such values from the LaTeX description. The important qualitative result is that unsafe operations are localized rather than spread throughout the data-model and conversion abstractions. This localization does not remove the need for review: each unsafe region depends on invariants concerning pointer validity, alignment, length, aliasing, and lifetime.
+The measured unsafe surface is therefore localized rather than spread throughout the data-model and conversion abstractions.
+This localization does not remove the need for review: each unsafe region depends on invariants concerning pointer validity,
+alignment, length, aliasing, ownership, and lifetime. The LOC measurement uses the same repository revision as the supplied
+implementation and benchmark artifacts and excludes generated \texttt{target/} files.
 
 \subsection{Safety Guarantees Across the FFI Boundary}
 \label{sec:ffi_safety_analysis}
@@ -2029,7 +2051,8 @@ Rust's static guarantees apply most strongly inside the Rust type system. At an 
 \begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|l|c|c|}
+{\small
+\begin{tabularx}{\textwidth}{|X|X|X|}
 \hline
 \textbf{Property} & \textbf{Inside Rust} & \textbf{Across FFI} \\ \hline
 Ownership & Type-system assisted & Contract / caller responsibility \\ \hline
@@ -2040,7 +2063,8 @@ Alignment & Type/layout guarantees & Foreign caller must satisfy contract \\ \hl
 Data layout & Rust representation rules & ABI contract required \\ \hline
 Panic/exception propagation & Rust-controlled & Must be prevented or explicitly represented \\ \hline
 Thread-safety assumptions & Rust types can constrain them & Foreign code must respect the interface contract \\ \hline
-\end{tabular}
+\end{tabularx}
+}
 \caption{Safety properties inside Rust and at the FFI boundary}
 \label{tab:ffi_safety_boundary}
 \end{table}

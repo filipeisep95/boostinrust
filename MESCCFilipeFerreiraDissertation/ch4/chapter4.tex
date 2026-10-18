@@ -17,7 +17,7 @@ The migration strategy is divided into six main steps. These steps operationalis
 The first step consists of analyzing the selected Boost library's source code, documentation and 
 relevant technical literature, to understand its purpose, functionality, interfaces and dependencies.
 
-This analysis identifies the relevant classes,funtions, data structures, algorithms, platform-specific
+This analysis identifies the relevant classes,functions, data structures, algorithms, platform-specific
 behavior and interactions with other libraries.
 Particular attention is given to aspects that affect the observable behavior of the library and that may influence its migration to Rust.
 
@@ -26,12 +26,12 @@ semantics of the original library and can be subsequently be integrated into exi
 
 \item \textbf{Define Rust equivalents for the library's classes, functions, and data structures.}
 
-Based on the analysus of the library's original implementation, the equivalent Rust abstractions
+Based on the analysis of the library's original implementation, the equivalent Rust abstractions
 are defined for the library's classes, functions, data structures and interfaces. 
 
 The Rust design does not necessarily replicate the structure of the original C++ implementation. 
 Where appropriate, the design may differ in order to take advantage of Rust's ownership model,
-type system, error handling mechanisms and idiomatic programmig practices, while preserving the required behavior of the original library.
+type system, error handling mechanisms and idiomatic programming practices, while preserving the required behavior of the original library.
 
 \item \textbf{Implement the library's functionality in Rust, ensuring that it adheres to Rust's ownership and borrowing properties 
 and best practices.}
@@ -39,7 +39,7 @@ and best practices.}
 The library's functionality is reimplemented in Rust. During this stage, particular attention is given to the Rust's ownership
 and borrowing model, ownership and borrowing properties, error handling and idiomatic design principles. 
 
-The implemenentation also considers the requirements and constraints of intended target environment.
+The implementation also considers the requirements and constraints of intended target environment.
 Where the use of \texttt{unsafe} Rust is necessary, such usage should be minimized and restricted to well-defined boundaries, 
 particularly when interacting with external code or platform-specific functionality.
 
@@ -67,7 +67,7 @@ interoperability layer introduce unacceptable overhead compared with the origina
 \item \textbf{Document the migration process, including any challenges encountered and solutions implemented, 
 to provide guidance for future migrations of other Boost libraries to Rust.}
 
-The final step consists of documenting the migration process, including design decisions, encoutered challenges, solutions, 
+The final step consists of documenting the migration process, including design decisions, encountered challenges, solutions, 
 testing results and lessons learned. 
 
 This documentation provides a reference for future migrations to other Boost libraries and 
@@ -80,7 +80,7 @@ the library's functionality and dependencies}, since an incomplete understanding
 incorrect assumptions about its behavior or dependencies. The second is the \textbf{implementation of the functionality in Rust}, 
 as this stage requires translating the original C++ abstractions into Rust while preserving the required semantics and taking 
 advantage of Rust's ownership and borrowing properties and type system. These two stages therefore have a significant influence on the 
-correctness and overall sucess of the migration.
+correctness and overall success of the migration.
 
 \begin{figure}[H]
 \centering

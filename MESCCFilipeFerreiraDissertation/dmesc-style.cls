@@ -420,10 +420,10 @@ KOMA-script documentation for details.}]{fancyhdr}
 	\vspace*{0.6cm}
 
 	% {\footnotesize \sffamily \bfseries \noindent \evallabel:} \\
-	% {\footnotesize \sffamily \noindent\presidentlabel: } \\
-	% {\footnotesize \sffamily \noindent \presidentname } \\
-	% {\footnotesize \sffamily \noindent \memberslabel:} \\
-	% {\footnotesize \sffamily \noindent \committee } \\
+	{\footnotesize \sffamily \noindent\presidentlabel: } \\
+	{\footnotesize \sffamily \noindent \presidentname } \\
+	{\footnotesize \sffamily \noindent \memberslabel:} \\
+	{\footnotesize \sffamily \noindent \committee } \\
 	\null
 	\vspace*{0.7cm}
 

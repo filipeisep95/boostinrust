@@ -83,17 +83,17 @@
         \begin{table}[H]
         \centering
         \renewcommand{\arraystretch}{1.2}
-        \begin{tabularx}{\textwidth}{|l|c|X|}
+        \begin{tabularx}{\textwidth}{|l|X|}
         \hline
-        \textbf{Criterion} & \textbf{Weight} & \textbf{Assessment question} \\ \hline
-        Automotive relevance & 15\% & Is the functionality relevant to low-level or embedded automotive software? \\ \hline
-        Safety relevance & 15\% & Does the component expose memory, representation, ownership, or other safety-relevant concerns? \\ \hline
-        Isolation capability & 15\% & Can the functionality be encapsulated behind a stable interface? \\ \hline
-        Interoperability relevance & 15\% & Does the component expose meaningful Rust/C++ boundary-design challenges? \\ \hline
-        Portability relevance & 10\% & Does the component involve platform, compiler, representation, or architecture concerns? \\ \hline
-        Performance relevance & 10\% & Can meaningful performance characteristics be evaluated experimentally? \\ \hline
-        Implementation complexity & 10\% & Is the component complex enough to exercise the methodology but bounded enough for a dissertation case study? \\ \hline
-        Pattern generalisability & 10\% & Does the component expose migration decisions that can be separated from library-specific details? \\ \hline
+        \textbf{Criterion} & \textbf{Assessment question} \\ \hline
+        Automotive relevance & Is the functionality relevant to low-level or embedded automotive software? \\ \hline
+        Safety relevance & Does the component expose memory, representation, ownership, or other safety-relevant concerns? \\ \hline
+        Isolation capability & Can the functionality be encapsulated behind a stable interface? \\ \hline
+        Interoperability relevance & Does the component expose meaningful Rust/C++ boundary-design challenges? \\ \hline
+        Portability relevance & Does the component involve platform, compiler, representation, or architecture concerns? \\ \hline
+        Performance relevance & Can meaningful performance characteristics be evaluated experimentally? \\ \hline
+        Implementation complexity & Is the component complex enough to exercise the methodology but bounded enough for a dissertation case study? \\ \hline
+        Pattern generalisability & Does the component expose migration decisions that can be separated from library-specific details? \\ \hline
         \end{tabularx}
         \caption{Operational criteria used for Boost component selection}
         \label{tab:selection_criteria}
@@ -104,23 +104,38 @@
         \begin{table}[H]
         \centering
         \renewcommand{\arraystretch}{1.2}
-        \begin{tabular}{|l|c|c|}
+        \small
+        \begin{tabular}{|l|c|c|c|c|c|c|}
         \hline
-        \textbf{Criterion} & \textbf{Boost.Align} & \textbf{Boost.Endian} \\ \hline
-        Automotive relevance & 4 & 4 \\ \hline
-        Safety relevance & 5 & 5 \\ \hline
-        Isolation capability & 5 & 5 \\ \hline
-        Interoperability relevance & 5 & 5 \\ \hline
-        Portability relevance & 4 & 5 \\ \hline
-        Performance relevance & 5 & 4 \\ \hline
-        Implementation complexity & 4 & 4 \\ \hline
-        Pattern generalisability & 5 & 5 \\ \hline
+        \textbf{Criterion} & \textbf{Align} & \textbf{Endian} & \textbf{Asio} & \textbf{Thread} & \textbf{SmartPtr} & \textbf{Optional} \\ \hline
+        Automotive relevance & High & High & High & High & High & Medium \\ \hline
+        Safety relevance & High & High & High & High & High & Medium \\ \hline
+        Isolation capability & High & High & Medium & Medium & High & High \\ \hline
+        Interoperability relevance & High & High & High & High & Medium & Medium \\ \hline
+        Portability relevance & High & High & High & High & High & High \\ \hline
+        Performance relevance & High & Medium & High & High & Medium & Low \\ \hline
+        Implementation complexity & Medium & Medium & High & Medium & Low & Low \\ \hline
+        Pattern generalisability & High & High & High & High & High & Medium \\ \hline
         \end{tabular}
-        \caption{Qualitative assessment of the selected Boost libraries}
+        \caption{Qualitative assessment of candidate Boost libraries}
         \label{tab:selected_library_assessment}
         \end{table}
 
-        The two libraries were retained because they expose complementary migration problems rather than because they represent the largest or most template-heavy Boost components. Boost.Align concentrates on alignment, allocation, raw-pointer access, SIMD, and a C++03 compatibility boundary. Boost.Endian concentrates on binary representation, fixed-width values, generic abstractions, and a higher-level C++ interoperability mechanism. Together, these characteristics expose different points in the migration design space while remaining sufficiently bounded for controlled experimentation.
+        The assessment was performed at the candidate-selection stage and is intended as a
+        qualitative decision aid rather than as a benchmark, percentage-based score, or universal
+        ranking of Boost libraries. The additional candidates were selected because they expose
+        migration concerns that complement the two implemented case studies. Boost.Asio and
+        Boost.Thread introduce concurrency and asynchronous-execution interoperability concerns;
+        Boost.SmartPtr directly exercises ownership and lifetime semantics; and Boost.Optional
+        provides a smaller example of translating explicit optional-value semantics.
+
+        Boost.Align and Boost.Endian were retained because they expose complementary migration
+        problems while remaining sufficiently bounded for controlled experimentation. Boost.Align
+        concentrates on alignment, allocation, raw-pointer access, SIMD, and a C++03 compatibility
+        boundary. Boost.Endian concentrates on binary representation, fixed-width values, generic
+        abstractions, and a higher-level C++ interoperability mechanism. Together, these
+        characteristics expose different points in the migration design space without claiming
+        that they are the only or universally best candidates.
 
         \subsection{Boost.Align and Boost.Endian as Migration Enablers}
         \label{sec:migration_enablers}
